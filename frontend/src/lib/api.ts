@@ -4,6 +4,8 @@ import type {
 } from "./types";
 
 const API_URL = (process.env.API_URL ?? "http://localhost:8080").replace(/\/$/, "");
+// Beri backend waktu menyelesaikan timeout scraping (20 detik) dan fallback cache stale.
+const API_TIMEOUT_MS = 25_000;
 
 export class ApiError extends Error {
   constructor(public readonly status: number, message: string) {
@@ -17,7 +19,7 @@ async function apiFetch<T>(path: string): Promise<T> {
   try {
     response = await fetch(`${API_URL}${path}`, {
       cache: "no-store",
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(API_TIMEOUT_MS),
     });
   } catch {
     throw new ApiError(503, "Layanan data belum dapat dihubungi.");

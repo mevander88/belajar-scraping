@@ -101,6 +101,27 @@ func TestServiceUsesStaleCacheWhenSourceFails(t *testing.T) {
 	}
 }
 
+func TestServiceUsesStaleCompleteCollectionWhenSourceTimesOut(t *testing.T) {
+	cached := scraper.Response{
+		Meta: scraper.Meta{Kind: scraper.KindComplete, SourceURL: "https://otakudesu.blog/complete-anime/", Count: 1},
+		Data: scraper.AnimeCollection{
+			Items:      []scraper.AnimeCard{{Slug: "finished", Title: "Finished", Status: "complete"}},
+			Pagination: scraper.Pagination{Current: 1, Last: 1},
+		},
+	}
+	payload, _ := json.Marshal(cached)
+	source := &fakeSource{err: context.DeadlineExceeded}
+	service := New(source, &fakeCache{stale: payload}, Policy{})
+
+	response, err := service.Get(context.Background(), scraper.Request{Kind: scraper.KindComplete, Page: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.Meta.Kind != scraper.KindComplete || response.Meta.Cache != "stale" || response.Meta.Count != 1 {
+		t.Fatalf("expected stale complete collection, got %#v", response.Meta)
+	}
+}
+
 func TestServiceBypassesUnavailableCache(t *testing.T) {
 	source := &fakeSource{response: sampleResponse()}
 	cache := &fakeCache{getErr: errors.New("Redis unavailable")}
@@ -112,6 +133,17 @@ func TestServiceBypassesUnavailableCache(t *testing.T) {
 	}
 	if response.Meta.Cache != "bypass" || cache.setCalls != 0 {
 		t.Fatalf("expected cache bypass, got %#v", response.Meta)
+	}
+}
+
+func TestServiceReturnsSourceFailureWhenCacheIsUnavailable(t *testing.T) {
+	source := &fakeSource{err: scraper.ErrUpstream}
+	cache := &fakeCache{getErr: errors.New("Redis unavailable")}
+	service := New(source, cache, Policy{})
+
+	_, err := service.Get(context.Background(), scraper.Request{Kind: scraper.KindComplete, Page: 1})
+	if !errors.Is(err, scraper.ErrUpstream) {
+		t.Fatalf("expected source failure, got %v", err)
 	}
 }
 
