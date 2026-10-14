@@ -185,6 +185,22 @@ func TestSearchEndpointRejectsEmptyQuery(t *testing.T) {
 	}
 }
 
+func TestAnimeEndpointDecodesUnicodeSlug(t *testing.T) {
+	scrapingService := &fakeScrapingService{}
+	app := NewWithDependencies(Dependencies{Scraping: scrapingService})
+	response, err := app.Test(newRequest("/api/v1/source/anime/bang-dream-yume%E2%88%9Emita-sub-indo"))
+	if err != nil {
+		t.Fatalf("request anime endpoint: %v", err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, response.StatusCode)
+	}
+	if scrapingService.request.Slug != "bang-dream-yume∞mita-sub-indo" {
+		t.Fatalf("expected canonical Unicode slug, got %q", scrapingService.request.Slug)
+	}
+}
+
 func newRequest(path string) *http.Request {
 	request, _ := http.NewRequest(http.MethodGet, path, nil)
 	return request

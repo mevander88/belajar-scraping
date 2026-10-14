@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 async function loadEpisode(slug: string) {
   try { return await getEpisode(slug); }
-  catch (error) { if (error instanceof ApiError && error.status === 404) notFound(); throw error; }
+  catch (error) { if (error instanceof ApiError && (error.status === 400 || error.status === 404)) notFound(); throw error; }
 }
 
 export default async function EpisodePage({ params }: Props) {

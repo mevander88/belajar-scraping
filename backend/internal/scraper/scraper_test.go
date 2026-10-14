@@ -197,6 +197,61 @@ func TestResolveRejectsExternalHosts(t *testing.T) {
 	}
 }
 
+func TestValidateRequestAcceptsSafeUnicodeSlug(t *testing.T) {
+	tests := []struct {
+		name  string
+		slug  string
+		valid bool
+	}{
+		{name: "ascii", slug: "example-anime", valid: true},
+		{name: "unicode symbol", slug: "bang-dream-yume∞mita-sub-indo", valid: true},
+		{name: "unicode letters", slug: "mahou-shoujo-éclair", valid: true},
+		{name: "encoded once", slug: "bang-dream-yume%E2%88%9Emita-sub-indo", valid: false},
+		{name: "encoded twice", slug: "bang-dream-yume%25E2%2588%259Emita-sub-indo", valid: false},
+		{name: "slash", slug: "anime/example", valid: false},
+		{name: "backslash", slug: `anime\example`, valid: false},
+		{name: "dot segment", slug: "..", valid: false},
+		{name: "query", slug: "example?preview=true", valid: false},
+		{name: "control character", slug: "example\nanime", valid: false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := ValidateRequest(Request{Kind: KindAnime, Slug: test.slug, Page: 1})
+			if test.valid && err != nil {
+				t.Fatalf("expected slug %q to be valid, got %v", test.slug, err)
+			}
+			if !test.valid && !errors.Is(err, ErrInvalidRequest) {
+				t.Fatalf("expected slug %q to be rejected, got %v", test.slug, err)
+			}
+		})
+	}
+}
+
+func TestRunEncodesUnicodeSlugOnceForSourceRequest(t *testing.T) {
+	var requestedPath string
+	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		requestedPath = request.URL.EscapedPath()
+		response.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = response.Write([]byte(`
+			<div class="infozingle"><p><span><b>Judul</b>: BanG Dream! Yume∞Mita</span></p></div>
+			<div class="sinopc"><p>Synopsis.</p></div>`))
+	}))
+	defer server.Close()
+
+	source, err := NewWithConfig(server.URL, server.Client(), 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = source.Run(context.Background(), Request{Kind: KindAnime, Slug: "bang-dream-yume∞mita-sub-indo", Page: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if requestedPath != "/anime/bang-dream-yume%E2%88%9Emita-sub-indo/" {
+		t.Fatalf("expected Unicode slug to be encoded once, got %q", requestedPath)
+	}
+}
+
 func TestRunRejectsPageWithoutExpectedContent(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
 		response.Header().Set("Content-Type", "text/html")

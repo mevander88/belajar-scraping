@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 async function loadAnime(slug: string) {
   try { return await getAnime(slug); }
-  catch (error) { if (error instanceof ApiError && error.status === 404) notFound(); throw error; }
+  catch (error) { if (error instanceof ApiError && (error.status === 400 || error.status === 404)) notFound(); throw error; }
 }
 
 export default async function AnimeDetailPage({ params }: Props) {

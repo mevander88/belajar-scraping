@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }: Props): Promise<Metadata> { const { slug } = await params; return { title: `Genre ${decodeURIComponent(slug).replaceAll("-", " ")}` }; }
 async function loadGenre(slug: string, page: number) {
   try { return await getGenre(slug, page); }
-  catch (error) { if (error instanceof ApiError && error.status === 404) notFound(); throw error; }
+  catch (error) { if (error instanceof ApiError && (error.status === 400 || error.status === 404)) notFound(); throw error; }
 }
 export default async function GenrePage({ params, searchParams }: Props) {
   const [{ slug }, query] = await Promise.all([params, searchParams]); const page = positivePage(query.page);
