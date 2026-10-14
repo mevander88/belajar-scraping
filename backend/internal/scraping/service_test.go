@@ -168,6 +168,18 @@ func TestServiceUsesLongerTTLForCompleteAnime(t *testing.T) {
 	}
 }
 
+func TestSearchCacheKeyUsesNormalizedQuery(t *testing.T) {
+	first := cacheKey(scraper.Request{Kind: scraper.KindSearch, Query: "  one   piece ", Page: 1})
+	second := cacheKey(scraper.Request{Kind: scraper.KindSearch, Query: "one piece", Page: 1})
+	other := cacheKey(scraper.Request{Kind: scraper.KindSearch, Query: "naruto", Page: 1})
+	if first != second {
+		t.Fatalf("expected equivalent queries to share a cache key: %q != %q", first, second)
+	}
+	if first == other {
+		t.Fatalf("expected different queries to use different cache keys: %q", first)
+	}
+}
+
 func sampleResponse() scraper.Response {
 	return scraper.Response{
 		Meta: scraper.Meta{

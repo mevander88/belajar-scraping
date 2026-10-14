@@ -70,6 +70,9 @@ func NewWithConfig(baseURL string, client *http.Client, delay time.Duration) (*S
 }
 
 func (s *Scraper) Run(ctx context.Context, request Request) (Response, error) {
+	if request.Kind == KindSearch {
+		request.Query = NormalizeSearchQuery(request.Query)
+	}
 	if err := ValidateRequest(request); err != nil {
 		return Response{}, err
 	}
@@ -100,6 +103,8 @@ func (s *Scraper) Run(ctx context.Context, request Request) (Response, error) {
 		data, sourceURL, count, err = s.anime(ctx, request.Slug)
 	case KindEpisode:
 		data, sourceURL, count, err = s.episode(ctx, request.Slug)
+	case KindSearch:
+		data, sourceURL, count, err = s.search(ctx, request.Query)
 	default:
 		return Response{}, fmt.Errorf("%w: unsupported kind %q", ErrInvalidRequest, request.Kind)
 	}
@@ -308,6 +313,25 @@ func (s *Scraper) episode(ctx context.Context, slug string) (any, string, int, e
 	return detail, sourceURL, len(detail.Downloads), nil
 }
 
+func (s *Scraper) search(ctx context.Context, query string) (any, string, int, error) {
+	params := url.Values{"s": {query}, "post_type": {"anime"}}
+	doc, sourceURL, err := s.fetch(ctx, "/?"+params.Encode())
+	if err != nil {
+		return nil, "", 0, err
+	}
+	pageTitle := strings.ToLower(cleanText(doc.Find("title").First().Text()))
+	heading := strings.ToLower(cleanText(doc.Find(".rvad h1").First().Text()))
+	if (!strings.Contains(pageTitle, "you searched for") && !strings.Contains(heading, "hasil pencarian")) || doc.Find(".chivsrc").Length() == 0 {
+		return nil, "", 0, fmt.Errorf("%w: search page marker was not found", ErrInvalidContent)
+	}
+	items := parseSearchResults(doc.Selection)
+	if len(items) > 12 {
+		items = items[:12]
+	}
+	result := SearchData{Query: query, MaxResults: 12, Items: items}
+	return result, sourceURL, len(items), nil
+}
+
 func parseCards(root *goquery.Selection, status string) []AnimeCard {
 	items := []AnimeCard{}
 	root.Find(".detpost").Each(func(_ int, card *goquery.Selection) {
@@ -355,6 +379,40 @@ func parseGenreCards(root *goquery.Selection) []AnimeCard {
 				Name: cleanText(genreLink.Text()),
 				URL:  genreURL,
 			})
+		})
+		if item.Title != "" && item.URL != "" {
+			items = append(items, item)
+		}
+	})
+	return items
+}
+
+func parseSearchResults(root *goquery.Selection) []AnimeCard {
+	items := []AnimeCard{}
+	root.Find(".chivsrc > li").Each(func(_ int, row *goquery.Selection) {
+		link := row.Find("h2 a").First()
+		href, _ := link.Attr("href")
+		cover, _ := row.Find("img").First().Attr("src")
+		item := AnimeCard{
+			Slug: slugFromURL(href), Title: cleanText(link.Text()), URL: href,
+			CoverURL: cover, Genres: []Genre{},
+		}
+		row.Find(".set").Each(func(_ int, field *goquery.Selection) {
+			label := strings.ToLower(cleanText(field.Find("b").First().Text()))
+			clone := field.Clone()
+			clone.Find("b").First().Remove()
+			value := strings.TrimSpace(strings.TrimPrefix(cleanText(clone.Text()), ":"))
+			switch label {
+			case "genres", "genre":
+				field.Find("a").Each(func(_ int, genreLink *goquery.Selection) {
+					genreURL, _ := genreLink.Attr("href")
+					item.Genres = append(item.Genres, Genre{Slug: slugFromURL(genreURL), Name: cleanText(genreLink.Text()), URL: genreURL})
+				})
+			case "status":
+				item.Status = normalizeStatus(value)
+			case "rating":
+				item.Score = value
+			}
 		})
 		if item.Title != "" && item.URL != "" {
 			items = append(items, item)
@@ -495,7 +553,14 @@ func validSlug(slug string) bool {
 	return true
 }
 
+func NormalizeSearchQuery(query string) string {
+	return strings.Join(strings.Fields(query), " ")
+}
+
 func ValidateRequest(request Request) error {
+	if request.Kind != KindSearch && request.Query != "" {
+		return fmt.Errorf("%w: query is only supported for search", ErrInvalidRequest)
+	}
 	switch request.Kind {
 	case KindHome, KindCatalog, KindSchedule, KindGenres, KindOngoing, KindComplete:
 		if request.Slug != "" {
@@ -504,6 +569,10 @@ func ValidateRequest(request Request) error {
 	case KindGenre, KindAnime, KindEpisode:
 		if !validSlug(request.Slug) {
 			return fmt.Errorf("%w: a valid slug is required for %s", ErrInvalidRequest, request.Kind)
+		}
+	case KindSearch:
+		if request.Slug != "" || NormalizeSearchQuery(request.Query) == "" || request.Page != 1 {
+			return fmt.Errorf("%w: a query and no pagination are required for search", ErrInvalidRequest)
 		}
 	default:
 		return fmt.Errorf("%w: unsupported kind %q", ErrInvalidRequest, request.Kind)
@@ -538,6 +607,9 @@ func validateResponse(response Response) error {
 	case KindEpisode:
 		data, ok := response.Data.(EpisodeDetail)
 		valid = ok && data.Title != "" && data.Slug != ""
+	case KindSearch:
+		data, ok := response.Data.(SearchData)
+		valid = ok && data.Query != "" && data.MaxResults == 12 && data.Items != nil
 	}
 	if !valid {
 		return fmt.Errorf("%w: required fields for %s were not found", ErrInvalidContent, response.Meta.Kind)

@@ -19,6 +19,7 @@ export type HomeData = { ongoing: AnimeCardData[]; complete: AnimeCardData[] };
 export type CatalogItem = { slug: string; title: string; url: string; status?: string };
 export type Pagination = { current: number; last: number; previous_url?: string; next_url?: string };
 export type AnimeCollection = { items: AnimeCardData[]; pagination: Pagination };
+export type SearchData = { query: string; max_results: number; items: AnimeCardData[] };
 export type ScheduleGroup = { day: string; items: CatalogItem[] };
 export type EpisodeSummary = { slug: string; title: string; url: string; release_text?: string };
 export type AnimeDetail = {

@@ -22,6 +22,7 @@ type Config struct {
 	CacheTTLSchedule      time.Duration
 	CacheTTLGenres        time.Duration
 	CacheTTLCollection    time.Duration
+	CacheTTLSearch        time.Duration
 	CacheTTLAnime         time.Duration
 	CacheTTLAnimeComplete time.Duration
 	CacheTTLEpisode       time.Duration
@@ -45,6 +46,7 @@ func Load() Config {
 		CacheTTLSchedule:      durationOrDefault("CACHE_TTL_SCHEDULE", 15*time.Minute),
 		CacheTTLGenres:        durationOrDefault("CACHE_TTL_GENRES", 12*time.Hour),
 		CacheTTLCollection:    durationOrDefault("CACHE_TTL_COLLECTION", 10*time.Minute),
+		CacheTTLSearch:        durationOrDefault("CACHE_TTL_SEARCH", 10*time.Minute),
 		CacheTTLAnime:         durationOrDefault("CACHE_TTL_ANIME", time.Hour),
 		CacheTTLAnimeComplete: durationOrDefault("CACHE_TTL_ANIME_COMPLETE", 12*time.Hour),
 		CacheTTLEpisode:       durationOrDefault("CACHE_TTL_EPISODE", 5*time.Minute),

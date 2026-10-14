@@ -14,12 +14,14 @@ const (
 	KindGenre    ContentKind = "genre"
 	KindAnime    ContentKind = "anime"
 	KindEpisode  ContentKind = "episode"
+	KindSearch   ContentKind = "search"
 )
 
 type Request struct {
-	Kind ContentKind `json:"kind"`
-	Slug string      `json:"slug,omitempty"`
-	Page int         `json:"page,omitempty"`
+	Kind  ContentKind `json:"kind"`
+	Slug  string      `json:"slug,omitempty"`
+	Query string      `json:"query,omitempty"`
+	Page  int         `json:"page,omitempty"`
 }
 
 type Meta struct {
@@ -74,6 +76,12 @@ type Pagination struct {
 type AnimeCollection struct {
 	Items      []AnimeCard `json:"items"`
 	Pagination Pagination  `json:"pagination"`
+}
+
+type SearchData struct {
+	Query      string      `json:"query"`
+	MaxResults int         `json:"max_results"`
+	Items      []AnimeCard `json:"items"`
 }
 
 type Genre struct {

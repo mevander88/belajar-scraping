@@ -153,6 +153,38 @@ func TestGenreEndpointMapsSlugAndPage(t *testing.T) {
 	}
 }
 
+func TestSearchEndpointMapsNormalizedQuery(t *testing.T) {
+	scrapingService := &fakeScrapingService{}
+	app := NewWithDependencies(Dependencies{Scraping: scrapingService})
+	response, err := app.Test(newRequest("/api/v1/source/search?query=one%20%20piece"))
+	if err != nil {
+		t.Fatalf("request search endpoint: %v", err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, response.StatusCode)
+	}
+	if scrapingService.request.Kind != scraper.KindSearch || scrapingService.request.Query != "one piece" || scrapingService.request.Page != 1 {
+		t.Fatalf("unexpected scraper request: %#v", scrapingService.request)
+	}
+}
+
+func TestSearchEndpointRejectsEmptyQuery(t *testing.T) {
+	scrapingService := &fakeScrapingService{}
+	app := NewWithDependencies(Dependencies{Scraping: scrapingService})
+	response, err := app.Test(newRequest("/api/v1/source/search?query=%20%20"))
+	if err != nil {
+		t.Fatalf("request search endpoint: %v", err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, response.StatusCode)
+	}
+	if scrapingService.request.Kind != "" {
+		t.Fatalf("expected service not to be called, got %#v", scrapingService.request)
+	}
+}
+
 func TestAnimeEndpointDecodesUnicodeSlug(t *testing.T) {
 	scrapingService := &fakeScrapingService{}
 	app := NewWithDependencies(Dependencies{Scraping: scrapingService})
