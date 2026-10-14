@@ -1,0 +1,19 @@
+:root {
+  --paper: oklch(95% 0.018 82);
+  --ink: oklch(22% 0.035 252);
+  --muted: oklch(43% 0.027 252);
+  --rule: oklch(79% 0.025 82);
+  --rule-strong: oklch(66% 0.03 82);
+  --accent: oklch(62% 0.18 39);
+  --accent-dark: oklch(43% 0.14 39);
+  --success: oklch(57% 0.13 151);
+  --warning: oklch(62% 0.18 39);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { min-height: 100vh; background: var(--paper); color: var(--ink); font-family: "Segoe UI", system-ui, sans-serif; font-size: 1rem; font-kerning: normal; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+a { color: inherit; text-decoration: none; }
+a:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
+::selection { background: var(--accent); color: var(--paper); }
+
