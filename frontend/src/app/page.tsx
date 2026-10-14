@@ -1,87 +1,26 @@
-import { connection } from "next/server";
-import styles from "./page.module.css";
+import Link from "next/link";
+import { AnimeGrid } from "@/components/anime-grid";
+import { DataNotice } from "@/components/data-notice";
+import { SectionHeading } from "@/components/section-heading";
+import { getHome, getReadiness } from "@/lib/api";
 
-type ServiceState = { online: boolean; detail: string };
-
-async function checkEndpoint(path: string): Promise<ServiceState> {
-  const apiUrl = process.env.API_URL ?? "http://localhost:8080";
-
-  try {
-    const response = await fetch(`${apiUrl}${path}`, {
-      cache: "no-store",
-      signal: AbortSignal.timeout(2500),
-    });
-    if (!response.ok) return { online: false, detail: `HTTP ${response.status}` };
-    return { online: true, detail: "Terhubung" };
-  } catch {
-    return { online: false, detail: "Belum terhubung" };
-  }
-}
+export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  await connection();
-  const [api, database] = await Promise.all([
-    checkEndpoint("/api/v1/health"),
-    checkEndpoint("/api/v1/ready"),
-  ]);
-
+  const [response, readiness] = await Promise.all([getHome(), getReadiness()]);
+  const services = [
+    ["API", readiness.api ? "Terhubung" : "Terputus", readiness.api],
+    ["Database", readiness.data.database === "connected" ? "Siap" : "Tidak siap", readiness.data.database === "connected"],
+    ["Cache", readiness.data.redis === "connected" ? "Siap" : "Terbatas", readiness.data.redis === "connected"],
+  ] as const;
   return (
-    <main className={styles.page}>
-      <div className={styles.grid} aria-hidden="true" />
-      <header className={styles.header}>
-        <a className={styles.brand} href="#top" aria-label="Belajar Scraping">
-          <span className={styles.mark}>BS</span>
-          <span>Belajar Scraping</span>
-        </a>
-        <span className={styles.edition}>Foundation / 01</span>
-      </header>
-
-      <section className={styles.hero} id="top">
-        <p className={styles.eyebrow}>Project foundation</p>
-        <h1>Fondasi siap.<br /><em>Data berikutnya.</em></h1>
-        <p className={styles.lead}>
-          Ruang kerja awal untuk membangun alur scraping yang terukur—dengan
-          frontend Next.js, API Go Fiber, dan PostgreSQL.
-        </p>
+    <>
+      <section className="shell grid min-h-[34rem] items-end gap-10 py-14 md:grid-cols-[1.4fr_.6fr] md:py-20">
+        <div><p className="eyebrow mb-5 text-accent-dark">Edisi terbaru / Anime guide</p><h1 className="display-title max-w-5xl text-6xl text-balance sm:text-8xl lg:text-[8.5rem]">Temukan cerita untuk layar berikutnya.</h1></div>
+        <div className="border-l border-ink pl-6"><p className="text-lg leading-8 text-muted">Jelajahi anime yang sedang berjalan, judul yang telah tamat, dan jadwal tayang dalam satu arsip yang mudah dibaca.</p><Link href="/anime?status=ongoing" className="mt-6 inline-block bg-accent px-5 py-3 text-sm font-bold text-paper hover:bg-accent-dark">Lihat anime ongoing →</Link></div>
       </section>
-
-      <section className={styles.statusSection} aria-labelledby="system-status">
-        <div className={styles.sectionHeading}>
-          <p>01 / Sistem</p>
-          <h2 id="system-status">Status koneksi</h2>
-        </div>
-        <div className={styles.statusList}>
-          <article className={styles.statusItem}>
-            <span className={`${styles.dot} ${api.online ? styles.online : styles.offline}`} aria-hidden="true" />
-            <div><h3>Go Fiber API</h3><p>Endpoint /api/v1/health</p></div>
-            <span className={styles.state}>{api.detail}</span>
-          </article>
-          <article className={styles.statusItem}>
-            <span className={`${styles.dot} ${database.online ? styles.online : styles.offline}`} aria-hidden="true" />
-            <div><h3>PostgreSQL</h3><p>Readiness melalui GORM</p></div>
-            <span className={styles.state}>{database.detail}</span>
-          </article>
-        </div>
-      </section>
-
-      <section className={styles.stack} aria-labelledby="technology-stack">
-        <div className={styles.sectionHeading}>
-          <p>02 / Stack</p>
-          <h2 id="technology-stack">Empat lapis, satu alur</h2>
-        </div>
-        <ol className={styles.stackList}>
-          <li><span>01</span><strong>Next.js</strong><small>Interface</small></li>
-          <li><span>02</span><strong>Go Fiber</strong><small>API</small></li>
-          <li><span>03</span><strong>GORM</strong><small>Data access</small></li>
-          <li><span>04</span><strong>PostgreSQL</strong><small>Storage</small></li>
-        </ol>
-      </section>
-
-      <footer className={styles.footer}>
-        <p>Built as a clean starting point.</p>
-        <p>Next.js 16 · Go 1.26</p>
-      </footer>
-    </main>
+      <section className="border-y border-ink bg-ink text-paper" aria-label="Status layanan"><div className="shell grid sm:grid-cols-3">{services.map(([name, state, ready]) => <div key={name} className="flex items-center justify-between border-b border-paper/20 py-4 sm:border-b-0 sm:border-r sm:px-5 first:pl-0 last:border-0"><span className="eyebrow text-paper/60">{name}</span><span className="flex items-center gap-2 text-sm font-bold"><i className={`size-2 rounded-full ${ready ? "bg-success" : "bg-accent"}`} aria-hidden="true" />{state}</span></div>)}</div></section>
+      <div className="shell py-16"><DataNotice meta={response.meta} /><section><SectionHeading index="01 / Sekarang" title="Sedang berjalan" href="/anime?status=ongoing" /><AnimeGrid items={response.data.ongoing} /></section><section className="mt-20"><SectionHeading index="02 / Arsip" title="Baru saja tamat" href="/anime?status=complete" /><AnimeGrid items={response.data.complete} /></section></div>
+    </>
   );
 }
-

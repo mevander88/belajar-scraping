@@ -1,0 +1,2 @@
+import Link from "next/link";
+export default function NotFound() { return <section className="shell py-24 text-center"><p className="eyebrow text-accent-dark">404 / Tidak ditemukan</p><h1 className="display-title mt-4 text-6xl sm:text-8xl">Judulnya tidak ada di arsip.</h1><p className="mt-5 text-muted">Periksa kembali alamat halaman atau lanjutkan dari katalog.</p><Link href="/katalog" className="mt-8 inline-block bg-ink px-6 py-3 text-sm font-bold text-paper">Buka katalog</Link></section>; }
