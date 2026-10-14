@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/mevander88/belajar-scraping/backend/internal/model"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -36,11 +37,15 @@ func Ping(db *gorm.DB) error {
 	return nil
 }
 
-// Migrate is the single entry point for schema migrations. Add future GORM
-// models here once the application has defined its business domain.
-func Migrate(db *gorm.DB, models ...any) error {
-	if len(models) == 0 {
-		return nil
+// Migrate is the single entry point for application schema migrations.
+func Migrate(db *gorm.DB) error {
+	if db == nil {
+		return fmt.Errorf("cannot migrate without a database connection")
 	}
-	return db.AutoMigrate(models...)
+
+	if err := db.AutoMigrate(&model.DataAnime{}); err != nil {
+		return fmt.Errorf("migrate database schema: %w", err)
+	}
+
+	return nil
 }

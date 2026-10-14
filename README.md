@@ -52,7 +52,14 @@ compose.yaml
 
 ## Migrasi schema
 
-Fungsi `database.Migrate` menjadi satu pintu migrasi berbasis GORM. Tambahkan model ke pemanggilan fungsi tersebut setelah domain bisnis ditentukan. Fondasi awal tidak membuat tabel bisnis.
+Migrasi berbasis GORM berjalan otomatis ketika backend berhasil terhubung ke PostgreSQL. Migrasi saat ini membuat tabel `data_anime`, termasuk constraint status dan index untuk soft delete.
+
+Untuk menjalankan migrasi secara lokal, cukup mulai backend:
+
+```bash
+cd backend
+go run ./cmd/api
+```
 
 ## Verifikasi
 

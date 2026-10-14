@@ -1,64 +1,55 @@
-# Planning Inisialisasi Project
+# Planning Penambahan Tabel `data_anime`
 
 ## Tujuan
 
-Buat project baru di folder ini dengan fondasi frontend, backend, dan database yang siap dikembangkan. Lingkup awal adalah setup project dan integrasi dasar; fitur bisnis akan ditentukan terpisah.
+Tambahkan tabel `data_anime` pada PostgreSQL untuk menyimpan informasi utama anime. Implementasi harus mengikuti pola GORM dan mekanisme migrasi yang sudah tersedia pada backend.
 
-## Teknologi
+## Struktur Data
 
-- **Node.js LTS** sebagai runtime untuk Next.js. Gunakan versi LTS aktif saat implementasi dan catat versinya di project.
-- **Next.js** untuk frontend aplikasi.
-- **Go Fiber (Gofiber)** untuk backend API, dijalankan menggunakan runtime/toolchain Go.
-- **GORM** sebagai ORM pada backend Go.
-- **PostgreSQL** sebagai database.
+Tabel `data_anime` memiliki kolom berikut:
 
-Catatan: Fiber dan GORM merupakan library Go, bukan dependency Node.js. Frontend dan backend perlu dikelola sebagai dua aplikasi dalam satu repository.
+| Kolom | Tipe | Ketentuan |
+| --- | --- | --- |
+| `id` | integer | Primary key dan bertambah otomatis |
+| `title` | varchar(255) | Judul utama anime |
+| `title_japan` | varchar(255) | Judul anime dalam bahasa Jepang |
+| `cover_url` | text | URL gambar sampul |
+| `skor` | varchar(10) | Nilai atau skor anime |
+| `produesur` | varchar(100) | Informasi produser |
+| `tipe` | varchar(100) | Tipe anime |
+| `status` | enum atau varchar | Hanya menerima `ongoing` atau `complete` |
+| `total_episode` | varchar(100) | Jumlah episode |
+| `duration` | varchar(100) | Durasi episode |
+| `release_date` | date | Tanggal rilis |
+| `studion` | varchar(100) | Nama studio |
+| `genre` | varchar(255) | Daftar genre |
+| `created_at` | timestamp | Otomatis menggunakan waktu saat data dibuat |
+| `updated_at` | timestamp | Waktu perubahan terakhir |
+| `deleted_at` | timestamp | Mendukung soft delete dan boleh kosong |
 
 ## Rencana Implementasi
 
-### 1. Siapkan Struktur Project
+1. Buat model GORM yang merepresentasikan tabel `data_anime` dan seluruh kolom di atas.
+2. Gunakan tipe data Go dan tag GORM yang sesuai dengan tipe kolom PostgreSQL.
+3. Batasi nilai `status` menjadi `ongoing` atau `complete` melalui validasi atau constraint database.
+4. Daftarkan model pada mekanisme migrasi backend agar tabel dibuat atau diperbarui ketika migrasi dijalankan.
+5. Pastikan `id`, timestamp pembuatan, timestamp pembaruan, dan soft delete dikelola secara konsisten oleh GORM.
+6. Tambahkan pengujian yang memastikan model dapat dimigrasikan dan aturan penting pada schema diterapkan.
+7. Perbarui dokumentasi backend dengan cara menjalankan migrasi.
 
-- Inisialisasi project di folder saat ini dengan direktori frontend dan backend yang terpisah.
-- Gunakan versi stabil teknologi yang kompatibel saat implementasi.
-- Siapkan konfigurasi environment, contoh konfigurasi tanpa rahasia, dan aturan Git untuk mengabaikan file lokal serta hasil build.
+## Catatan Implementasi
 
-### 2. Siapkan Frontend
-
-- Inisialisasi Next.js menggunakan Node.js LTS.
-- Buat halaman awal sederhana sebagai tanda aplikasi berjalan.
-- Siapkan konfigurasi alamat API dan integrasi dasar dengan backend.
-
-### 3. Siapkan Backend
-
-- Inisialisasi aplikasi Go dengan Fiber.
-- Siapkan struktur dasar untuk routing, konfigurasi, dan akses database menggunakan GORM.
-- Sediakan endpoint pemeriksaan kesehatan aplikasi dan koneksi database.
-- Siapkan penanganan error, logging, serta pengaturan akses frontend ke API sesuai kebutuhan.
-
-### 4. Siapkan Database
-
-- Sediakan PostgreSQL untuk pengembangan lokal dengan cara setup yang mudah diulang.
-- Hubungkan backend ke database melalui konfigurasi environment.
-- Tentukan mekanisme migrasi schema yang konsisten untuk pengembangan berikutnya.
-- Jangan menambahkan model bisnis sebelum kebutuhan fitur ditentukan.
-
-### 5. Verifikasi dan Dokumentasi
-
-- Pastikan frontend dan backend dapat dijalankan bersama secara lokal.
-- Verifikasi komunikasi frontend ke backend serta koneksi backend ke PostgreSQL.
-- Pastikan build frontend dan pemeriksaan dasar backend berhasil.
-- Tulis README berisi prasyarat, konfigurasi environment, setup database, dan langkah menjalankan serta memverifikasi project.
+- Gunakan penamaan tabel `data_anime` secara eksplisit agar GORM tidak mengubahnya menjadi bentuk plural lain.
+- Pertahankan nama kolom `produesur` dan `studion` sesuai kebutuhan saat ini.
+- `deleted_at` harus memiliki index agar query soft delete tetap efisien.
+- Jangan menambahkan endpoint CRUD atau proses scraping dalam pekerjaan ini.
 
 ## Kriteria Selesai
 
-- Project tersedia di folder ini dengan frontend Next.js dan backend Go Fiber yang terpisah.
-- Versi Node.js LTS dan Go yang digunakan terdokumentasi.
-- Halaman awal frontend dapat diakses dan menampilkan hasil komunikasi sederhana dengan backend.
-- Backend dapat mengakses PostgreSQL menggunakan GORM; kegagalan koneksi terlapor dengan jelas.
-- Konfigurasi rahasia tidak disimpan di repository.
-- Programmer berikutnya dapat menjalankan project mengikuti README.
-
-## Di Luar Lingkup
-
-- Fitur bisnis, autentikasi, dan desain UI lengkap.
-- Deployment production dan infrastruktur lanjutan.
+- Model GORM untuk `data_anime` tersedia dan dapat dikompilasi.
+- Migrasi berhasil membuat tabel dengan tipe dan batasan kolom yang sesuai.
+- Nilai `status` di luar `ongoing` dan `complete` ditolak.
+- `created_at` memiliki nilai default waktu pembuatan.
+- `updated_at` dapat diperbarui ketika data berubah.
+- `deleted_at` mendukung mekanisme soft delete GORM.
+- Test backend dan dokumentasi migrasi berhasil diperbarui.

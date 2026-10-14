@@ -16,6 +16,10 @@ func main() {
 		log.Printf("database unavailable: %v", err)
 	} else {
 		log.Println("database connection established")
+		if err := database.Migrate(db); err != nil {
+			log.Fatalf("database migration failed: %v", err)
+		}
+		log.Println("database migration completed")
 	}
 
 	app := server.New(db, cfg.AllowedOrigins)
