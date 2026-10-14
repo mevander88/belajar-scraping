@@ -8,7 +8,6 @@ import { ApiError, getAnime } from "@/lib/api";
 import { labelStatus } from "@/lib/query";
 
 type Props = { params: Promise<{ slug: string }> };
-export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;

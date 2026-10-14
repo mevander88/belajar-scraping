@@ -14,17 +14,21 @@ type Store struct {
 	prefix string
 }
 
-func Open(ctx context.Context, rawURL, prefix string) (*Store, error) {
+func Open(ctx context.Context, rawURL, prefix string, poolSizes ...int) (*Store, error) {
 	options, err := redis.ParseURL(rawURL)
 	if err != nil {
 		return nil, fmt.Errorf("parse Redis URL: %w", err)
 	}
+	if len(poolSizes) > 0 && poolSizes[0] > 0 {
+		options.PoolSize = poolSizes[0]
+	}
+	options.MaxRetries = -1
+	options.DialTimeout = time.Second
+	options.ReadTimeout = time.Second
+	options.WriteTimeout = time.Second
 	client := redis.NewClient(options)
 	store := &Store{client: client, prefix: strings.TrimSuffix(prefix, ":")}
-	if err := store.Ping(ctx); err != nil {
-		_ = client.Close()
-		return nil, err
-	}
+	_ = ctx // connectivity is checked separately so the client can recover later
 	return store, nil
 }
 

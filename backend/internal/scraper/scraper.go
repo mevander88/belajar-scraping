@@ -175,17 +175,13 @@ func (s *Scraper) fetch(ctx context.Context, rawPath string) (*goquery.Document,
 		return nil, "", fmt.Errorf("%w: %s returned content type %q", ErrUpstream, target, contentType)
 	}
 
-	limited := io.LimitReader(response.Body, maxBodyBytes+1)
-	body, err := io.ReadAll(limited)
-	if err != nil {
-		return nil, "", fmt.Errorf("%w: read %s: %w", ErrUpstream, target, err)
-	}
-	if len(body) > maxBodyBytes {
-		return nil, "", fmt.Errorf("%w: response from %s exceeds %d bytes", ErrUpstream, target, maxBodyBytes)
-	}
-	document, err := goquery.NewDocumentFromReader(strings.NewReader(string(body)))
+	limited := &io.LimitedReader{R: response.Body, N: maxBodyBytes + 1}
+	document, err := goquery.NewDocumentFromReader(limited)
 	if err != nil {
 		return nil, "", fmt.Errorf("%w: parse %s: %v", ErrInvalidContent, target, err)
+	}
+	if limited.N == 0 {
+		return nil, "", fmt.Errorf("%w: response from %s exceeds %d bytes", ErrUpstream, target, maxBodyBytes)
 	}
 	return document, response.Request.URL.String(), nil
 }

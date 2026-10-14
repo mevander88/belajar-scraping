@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mevander88/belajar-scraping/backend/internal/capacity"
 	"github.com/mevander88/belajar-scraping/backend/internal/coalesce"
 	"github.com/mevander88/belajar-scraping/backend/internal/scraper"
 )
@@ -38,12 +39,17 @@ type Service struct {
 	flights        coalesce.Group[string, scraper.MediaStream]
 	localMu        sync.Mutex
 	local          map[string]localEntry
+	limiter        *capacity.Limiter
 }
 
-func New(source Source, cache Cache, ttl, resolveTimeout time.Duration) *Service {
+func New(source Source, cache Cache, ttl, resolveTimeout time.Duration, limiters ...*capacity.Limiter) *Service {
+	var limiter *capacity.Limiter
+	if len(limiters) > 0 {
+		limiter = limiters[0]
+	}
 	return &Service{
 		source: source, cache: cache, ttl: ttl, resolveTimeout: resolveTimeout,
-		local: make(map[string]localEntry),
+		local: make(map[string]localEntry), limiter: limiter,
 	}
 }
 
@@ -78,6 +84,11 @@ func (s *Service) ResolveStream(ctx context.Context, slug, serverID string, refr
 			resolveContext, cancel = context.WithTimeout(ctx, s.resolveTimeout)
 		}
 		defer cancel()
+		release, err := s.limiter.Acquire(resolveContext)
+		if err != nil {
+			return scraper.MediaStream{}, err
+		}
+		defer release()
 
 		stream, err := s.source.ResolveStream(resolveContext, slug, serverID)
 		if err != nil {

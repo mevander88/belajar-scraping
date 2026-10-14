@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/mevander88/belajar-scraping/backend/internal/capacity"
 	"github.com/mevander88/belajar-scraping/backend/internal/coalesce"
 	"github.com/mevander88/belajar-scraping/backend/internal/scraper"
 )
@@ -29,6 +30,7 @@ type Policy struct {
 	TTL              map[scraper.ContentKind]time.Duration
 	CompleteAnimeTTL time.Duration
 	StaleTTL         time.Duration
+	Limiter          *capacity.Limiter
 }
 
 type Service struct {
@@ -74,6 +76,11 @@ func (s *Service) Get(ctx context.Context, request scraper.Request) (scraper.Res
 	}
 
 	response, sourceErr := s.flights.Do(ctx, key, func() (scraper.Response, error) {
+		release, err := s.policy.Limiter.Acquire(ctx)
+		if err != nil {
+			return scraper.Response{}, err
+		}
+		defer release()
 		return s.source.Run(ctx, request)
 	})
 	if sourceErr != nil {

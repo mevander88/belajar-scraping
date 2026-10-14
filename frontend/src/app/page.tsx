@@ -6,8 +6,6 @@ import { DataNotice } from "@/components/data-notice";
 import { SectionHeading } from "@/components/section-heading";
 import { getHome } from "@/lib/api";
 
-export const dynamic = "force-dynamic";
-
 export default async function Home() {
   const response = await getHome();
   const [featured, ...ongoing] = response.data.ongoing;

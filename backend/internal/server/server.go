@@ -12,6 +12,7 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/cors"
 	"github.com/gofiber/fiber/v3/middleware/logger"
 	"github.com/gofiber/fiber/v3/middleware/recover"
+	"github.com/mevander88/belajar-scraping/backend/internal/capacity"
 	"github.com/mevander88/belajar-scraping/backend/internal/database"
 	"github.com/mevander88/belajar-scraping/backend/internal/scraper"
 	"gorm.io/gorm"
@@ -137,6 +138,8 @@ func streamHandler(resolver StreamResolver) fiber.Handler {
 				return fiber.NewError(fiber.StatusUnprocessableEntity, "server ini tidak menyediakan media langsung yang didukung")
 			case errors.Is(err, context.DeadlineExceeded):
 				return fiber.NewError(fiber.StatusGatewayTimeout, "server video melewati batas waktu")
+			case errors.Is(err, capacity.ErrOverloaded):
+				return fiber.NewError(fiber.StatusServiceUnavailable, "layanan video sedang penuh")
 			default:
 				return fiber.NewError(fiber.StatusBadGateway, "media langsung belum dapat dimuat")
 			}
@@ -224,6 +227,8 @@ func mapScrapingError(err error) error {
 		return fiber.NewError(fiber.StatusNotFound, "konten tidak ditemukan pada website sumber")
 	case errors.Is(err, context.DeadlineExceeded):
 		return fiber.NewError(fiber.StatusGatewayTimeout, "website sumber melewati batas waktu")
+	case errors.Is(err, capacity.ErrOverloaded):
+		return fiber.NewError(fiber.StatusServiceUnavailable, "layanan scraping sedang penuh")
 	case errors.Is(err, scraper.ErrUpstream):
 		return fiber.NewError(fiber.StatusBadGateway, "website sumber tidak dapat diakses")
 	case errors.Is(err, scraper.ErrInvalidContent):
@@ -241,6 +246,8 @@ func scrapingErrorCategory(err error) string {
 		return "not_found"
 	case errors.Is(err, context.DeadlineExceeded):
 		return "timeout"
+	case errors.Is(err, capacity.ErrOverloaded):
+		return "overloaded"
 	case errors.Is(err, scraper.ErrUpstream):
 		return "upstream"
 	case errors.Is(err, scraper.ErrInvalidContent):
