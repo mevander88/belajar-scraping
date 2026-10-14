@@ -123,9 +123,21 @@ type AnimeDetail struct {
 	Batches        []EpisodeSummary `json:"batches"`
 }
 
-type Stream struct {
-	Provider string `json:"provider,omitempty"`
-	URL      string `json:"url"`
+type StreamServer struct {
+	ID        string `json:"id"`
+	Provider  string `json:"provider"`
+	Quality   string `json:"quality"`
+	Default   bool   `json:"default,omitempty"`
+	Supported bool   `json:"supported"`
+}
+
+type MediaStream struct {
+	ServerID    string `json:"server_id"`
+	Provider    string `json:"provider"`
+	Quality     string `json:"quality"`
+	URL         string `json:"url"`
+	Kind        string `json:"kind"`
+	ContentType string `json:"content_type"`
 }
 
 type DownloadLink struct {
@@ -144,7 +156,7 @@ type EpisodeDetail struct {
 	URL       string           `json:"url"`
 	Title     string           `json:"title"`
 	PosterURL string           `json:"poster_url,omitempty"`
-	Streams   []Stream         `json:"streams"`
+	Servers   []StreamServer   `json:"servers"`
 	Episodes  []EpisodeSummary `json:"episode_options"`
 	Downloads []DownloadGroup  `json:"downloads"`
 }

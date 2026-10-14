@@ -15,6 +15,18 @@ type fakeScrapingService struct {
 	err     error
 }
 
+type fakeStreamResolver struct {
+	slug     string
+	serverID string
+	stream   scraper.MediaStream
+	err      error
+}
+
+func (f *fakeStreamResolver) ResolveStream(_ context.Context, slug, serverID string) (scraper.MediaStream, error) {
+	f.slug, f.serverID = slug, serverID
+	return f.stream, f.err
+}
+
 func (f *fakeScrapingService) Get(_ context.Context, request scraper.Request) (scraper.Response, error) {
 	f.request = request
 	if f.err != nil {
@@ -182,6 +194,32 @@ func TestSearchEndpointRejectsEmptyQuery(t *testing.T) {
 	}
 	if scrapingService.request.Kind != "" {
 		t.Fatalf("expected service not to be called, got %#v", scrapingService.request)
+	}
+}
+
+func TestStreamEndpointMapsServerChoice(t *testing.T) {
+	resolver := &fakeStreamResolver{stream: scraper.MediaStream{ServerID: "480p-0", URL: "https://cdn.odcloud.net/anime/example.mp4", Kind: "file", ContentType: "video/mp4"}}
+	app := NewWithDependencies(Dependencies{Streams: resolver})
+	response, err := app.Test(newRequest("/api/v1/source/episodes/example-1/streams/480p-0"))
+	if err != nil {
+		t.Fatalf("request stream endpoint: %v", err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK || resolver.slug != "example-1" || resolver.serverID != "480p-0" {
+		t.Fatalf("unexpected stream request: status=%d slug=%q server=%q", response.StatusCode, resolver.slug, resolver.serverID)
+	}
+}
+
+func TestStreamEndpointRejectsUnsupportedProvider(t *testing.T) {
+	resolver := &fakeStreamResolver{err: fmt.Errorf("%w: mega", scraper.ErrStreamUnsupported)}
+	app := NewWithDependencies(Dependencies{Streams: resolver})
+	response, err := app.Test(newRequest("/api/v1/source/episodes/example-1/streams/480p-1"))
+	if err != nil {
+		t.Fatalf("request stream endpoint: %v", err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusUnprocessableEntity {
+		t.Fatalf("expected status %d, got %d", http.StatusUnprocessableEntity, response.StatusCode)
 	}
 }
 

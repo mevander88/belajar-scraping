@@ -26,6 +26,7 @@ type Config struct {
 	CacheTTLAnime         time.Duration
 	CacheTTLAnimeComplete time.Duration
 	CacheTTLEpisode       time.Duration
+	CacheTTLStream        time.Duration
 	AllowedOrigins        []string
 }
 
@@ -50,6 +51,7 @@ func Load() Config {
 		CacheTTLAnime:         durationOrDefault("CACHE_TTL_ANIME", time.Hour),
 		CacheTTLAnimeComplete: durationOrDefault("CACHE_TTL_ANIME_COMPLETE", 12*time.Hour),
 		CacheTTLEpisode:       durationOrDefault("CACHE_TTL_EPISODE", 5*time.Minute),
+		CacheTTLStream:        durationOrDefault("CACHE_TTL_STREAM", 3*time.Minute),
 		AllowedOrigins:        splitAndTrim(valueOrDefault("CORS_ALLOWED_ORIGINS", "http://localhost:3000")),
 	}
 }

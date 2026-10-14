@@ -12,6 +12,7 @@ import (
 	"github.com/mevander88/belajar-scraping/backend/internal/scraper"
 	"github.com/mevander88/belajar-scraping/backend/internal/scraping"
 	"github.com/mevander88/belajar-scraping/backend/internal/server"
+	"github.com/mevander88/belajar-scraping/backend/internal/streaming"
 )
 
 func main() {
@@ -69,9 +70,10 @@ func main() {
 		CompleteAnimeTTL: cfg.CacheTTLAnimeComplete,
 		StaleTTL:         cfg.CacheStaleTTL,
 	})
+	streamingService := streaming.New(source, scrapingCache, cfg.CacheTTLStream)
 
 	app := server.NewWithDependencies(server.Dependencies{
-		Database: db, Cache: cacheHealth, Scraping: scrapingService, AllowedOrigins: cfg.AllowedOrigins,
+		Database: db, Cache: cacheHealth, Scraping: scrapingService, Streams: streamingService, AllowedOrigins: cfg.AllowedOrigins,
 	})
 	address := ":" + cfg.Port
 	log.Printf("API listening on http://localhost%s", address)

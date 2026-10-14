@@ -32,10 +32,15 @@ type ScrapingService interface {
 	Get(context.Context, scraper.Request) (scraper.Response, error)
 }
 
+type StreamResolver interface {
+	ResolveStream(context.Context, string, string) (scraper.MediaStream, error)
+}
+
 type Dependencies struct {
 	Database       *gorm.DB
 	Cache          CacheHealth
 	Scraping       ScrapingService
+	Streams        StreamResolver
 	AllowedOrigins []string
 }
 
@@ -107,8 +112,34 @@ func NewWithDependencies(dependencies Dependencies) *fiber.App {
 	source.Get("/anime", animeCollectionHandler(dependencies.Scraping))
 	source.Get("/anime/:slug", scrapeHandler(dependencies.Scraping, scraper.KindAnime, true))
 	source.Get("/episodes/:slug", scrapeHandler(dependencies.Scraping, scraper.KindEpisode, true))
+	source.Get("/episodes/:slug/streams/:server", streamHandler(dependencies.Streams))
 
 	return app
+}
+
+func streamHandler(resolver StreamResolver) fiber.Handler {
+	return func(c fiber.Ctx) error {
+		if resolver == nil {
+			return fiber.NewError(fiber.StatusServiceUnavailable, "layanan video belum tersedia")
+		}
+		stream, err := resolver.ResolveStream(c.Context(), c.Params("slug"), c.Params("server"))
+		if err != nil {
+			log.Printf("stream resolution failed slug=%q server=%q category=%s: %v", c.Params("slug"), c.Params("server"), scrapingErrorCategory(err), err)
+			switch {
+			case errors.Is(err, scraper.ErrInvalidRequest):
+				return fiber.NewError(fiber.StatusBadRequest, "pilihan server video tidak valid")
+			case errors.Is(err, scraper.ErrNotFound):
+				return fiber.NewError(fiber.StatusNotFound, "episode tidak ditemukan pada website sumber")
+			case errors.Is(err, scraper.ErrStreamUnsupported):
+				return fiber.NewError(fiber.StatusUnprocessableEntity, "server ini tidak menyediakan media langsung yang didukung")
+			case errors.Is(err, context.DeadlineExceeded):
+				return fiber.NewError(fiber.StatusGatewayTimeout, "server video melewati batas waktu")
+			default:
+				return fiber.NewError(fiber.StatusBadGateway, "media langsung belum dapat dimuat")
+			}
+		}
+		return c.JSON(stream)
+	}
 }
 
 func searchHandler(service ScrapingService) fiber.Handler {
@@ -211,6 +242,10 @@ func scrapingErrorCategory(err error) string {
 		return "upstream"
 	case errors.Is(err, scraper.ErrInvalidContent):
 		return "invalid_content"
+	case errors.Is(err, scraper.ErrStreamUnsupported):
+		return "stream_unsupported"
+	case errors.Is(err, scraper.ErrStreamUnavailable):
+		return "stream_unavailable"
 	default:
 		return "internal"
 	}
