@@ -34,7 +34,3 @@ export type EpisodeDetail = {
   slug: string; url: string; title: string; poster_url?: string;
   streams: Stream[]; episode_options: EpisodeSummary[]; downloads: DownloadGroup[];
 };
-export type Readiness = {
-  status: string; service?: string; database?: string; redis?: string;
-  timestamp?: string; message?: string | string[];
-};

@@ -18,5 +18,5 @@ export default async function GenrePage({ params, searchParams }: Props) {
   const [{ slug }, query] = await Promise.all([params, searchParams]); const page = positivePage(query.page);
   const response = await loadGenre(slug, page);
   const label = decodeURIComponent(slug).replaceAll("-", " ");
-  return <><PageHeading index="03 / Genre" eyebrow={`Halaman ${response.data.pagination.current}`} title={`Cerita dalam genre ${label}.`} /><div className="shell py-12"><DataNotice meta={response.meta} /><AnimeGrid items={response.data.items} /><Pagination current={response.data.pagination.current} last={response.data.pagination.last} basePath={`/genres/${slug}`} /></div></>;
+  return <><PageHeading eyebrow={`Genre · Halaman ${response.data.pagination.current}`} title={label} description="Pilih judul untuk melihat informasi dan episode yang tersedia." /><div className="shell py-10 md:py-12"><DataNotice meta={response.meta} /><AnimeGrid items={response.data.items} /><Pagination current={response.data.pagination.current} last={response.data.pagination.last} basePath={`/genres/${slug}`} /></div></>;
 }

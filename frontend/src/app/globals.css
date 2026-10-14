@@ -30,8 +30,6 @@ body {
   min-height: 100vh;
   margin: 0;
   background-color: var(--paper);
-  background-image: linear-gradient(to right, color-mix(in oklch, var(--rule) 22%, transparent) 1px, transparent 1px);
-  background-size: min(8vw, 7rem) 100%;
   color: var(--ink);
   font-family: "Segoe UI", system-ui, sans-serif;
   font-kerning: normal;
@@ -47,11 +45,24 @@ img { background: var(--paper-deep); }
 .skip-link:focus { transform: translateY(0); }
 .shell { width: min(calc(100% - 2rem), 90rem); margin-inline: auto; }
 .section-rule { border-top: 1px solid var(--ink); }
-.display-title { font-family: Georgia, "Times New Roman", serif; letter-spacing: -.045em; line-height: .94; }
+.display-title { font-family: Georgia, "Times New Roman", serif; letter-spacing: -.04em; line-height: .98; }
 .eyebrow { font-size: .72rem; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
 .text-balance { text-wrap: balance; }
 .link-line { text-decoration: underline; text-decoration-color: var(--accent); text-decoration-thickness: 2px; text-underline-offset: 4px; }
 .link-line:hover { color: var(--accent-dark); }
 .paper-panel { background: color-mix(in oklch, var(--paper) 94%, white); }
-@media (max-width: 47.99rem) { body { background-size: 4rem 100%; } .shell { width: min(calc(100% - 1.25rem), 90rem); } }
+.editorial-grid {
+  background-image: linear-gradient(to right, color-mix(in oklch, var(--rule) 32%, transparent) 1px, transparent 1px);
+  background-size: min(8vw, 7rem) 100%;
+}
+.page-title { font-size: clamp(2.75rem, 7vw, 6.5rem); }
+.section-title { font-size: clamp(2.25rem, 4vw, 4rem); }
+.anime-detail-header { display: grid; grid-template-areas: "intro" "cover" "facts"; gap: 2rem; }
+.anime-detail-cover { grid-area: cover; }
+.anime-detail-intro { grid-area: intro; }
+.anime-detail-facts { grid-area: facts; }
+@media (min-width: 48rem) {
+  .anime-detail-header { grid-template-columns: minmax(15rem, 22rem) 1fr; grid-template-areas: "cover intro" "cover facts"; column-gap: 3.5rem; align-items: end; }
+}
+@media (max-width: 47.99rem) { .shell { width: min(calc(100% - 1.25rem), 90rem); } .editorial-grid { background-size: 4rem 100%; } }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; } }

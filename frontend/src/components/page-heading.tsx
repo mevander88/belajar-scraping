@@ -1,8 +1,11 @@
-export function PageHeading({ index, eyebrow, title, description }: { index: string; eyebrow: string; title: string; description?: string }) {
+export function PageHeading({ eyebrow, title, description }: { eyebrow: string; title: string; description?: string }) {
   return (
-    <header className="shell grid gap-5 border-b border-ink py-12 md:grid-cols-[7rem_1fr] md:py-16">
-      <span className="eyebrow text-accent-dark">{index}</span>
-      <div><p className="eyebrow mb-3 text-muted">{eyebrow}</p><h1 className="display-title max-w-5xl text-5xl text-balance sm:text-7xl lg:text-8xl">{title}</h1>{description && <p className="mt-6 max-w-2xl text-lg leading-8 text-muted">{description}</p>}</div>
+    <header className="editorial-grid border-b border-ink">
+      <div className="shell py-9 md:py-12">
+        <p className="eyebrow mb-3 text-accent-dark">{eyebrow}</p>
+        <h1 className="display-title page-title max-w-5xl text-balance">{title}</h1>
+        {description && <p className="mt-5 max-w-2xl text-base leading-7 text-muted md:text-lg">{description}</p>}
+      </div>
     </header>
   );
 }

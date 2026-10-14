@@ -17,5 +17,6 @@ export default async function AnimePage({ searchParams }: { searchParams: Promis
   const page = positivePage(query.page);
   const response = await getAnimeCollection(status, page);
   const title = status === "complete" ? "Anime yang telah tamat" : "Anime yang sedang berjalan";
-  return <><PageHeading index="01 / Koleksi" eyebrow={`${status} · halaman ${response.data.pagination.current}`} title={title} description="Pilih judul untuk melihat sinopsis, informasi tayang, dan daftar episode." /><div className="shell py-12"><DataNotice meta={response.meta} /><AnimeGrid items={response.data.items} /><Pagination current={response.data.pagination.current} last={response.data.pagination.last} basePath="/anime" params={{ status }} /></div></>;
+  const label = status === "complete" ? "Koleksi tamat" : "Tayang sekarang";
+  return <><PageHeading eyebrow={`${label} · Halaman ${response.data.pagination.current}`} title={title} description="Pilih judul untuk melihat informasi tayang dan daftar episode." /><div className="shell py-10 md:py-12"><DataNotice meta={response.meta} /><AnimeGrid items={response.data.items} /><Pagination current={response.data.pagination.current} last={response.data.pagination.last} basePath="/anime" params={{ status }} /></div></>;
 }
