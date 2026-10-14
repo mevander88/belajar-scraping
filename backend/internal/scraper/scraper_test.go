@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -124,6 +125,66 @@ func TestRunRejectsPageWithoutExpectedContent(t *testing.T) {
 	_, err = source.Run(context.Background(), Request{Kind: KindHome, Page: 1})
 	if !errors.Is(err, ErrInvalidContent) {
 		t.Fatalf("expected invalid content error, got %v", err)
+	}
+}
+
+func TestRunParsesCompleteCollection(t *testing.T) {
+	var requestedPath string
+	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		requestedPath = request.URL.Path
+		response.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = response.Write([]byte(`
+			<div class="detpost">
+				<div class="thumb"><a href="/anime/example-complete/"><img src="cover.jpg"></a></div>
+				<div class="jdlflm">Example Complete</div>
+				<div class="epz">12 Episode</div><div class="epztipe">8.20</div><div class="newnime">14 Okt</div>
+			</div>
+			<a class="page-numbers" href="/complete-anime/page/3/">3</a>
+			<a class="page-numbers next" href="/complete-anime/page/2/">Next</a>`))
+	}))
+	defer server.Close()
+
+	source, err := NewWithConfig(server.URL, server.Client(), 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response, err := source.Run(context.Background(), Request{Kind: KindComplete, Page: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if requestedPath != "/complete-anime/" {
+		t.Fatalf("expected complete collection path, got %q", requestedPath)
+	}
+	collection, ok := response.Data.(AnimeCollection)
+	if !ok || len(collection.Items) != 1 {
+		t.Fatalf("unexpected complete collection: %#v", response.Data)
+	}
+	item := collection.Items[0]
+	if item.Slug != "example-complete" || item.Status != "complete" || item.Score != "8.20" {
+		t.Fatalf("unexpected complete item: %#v", item)
+	}
+	if collection.Pagination.Current != 1 || collection.Pagination.Last != 3 || collection.Pagination.Next == "" {
+		t.Fatalf("unexpected pagination: %#v", collection.Pagination)
+	}
+}
+
+func TestRunMapsCompleteCollectionTimeout(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
+		time.Sleep(50 * time.Millisecond)
+		response.Header().Set("Content-Type", "text/html")
+		_, _ = response.Write([]byte(`<div class="detpost"></div>`))
+	}))
+	defer server.Close()
+
+	client := server.Client()
+	client.Timeout = 5 * time.Millisecond
+	source, err := NewWithConfig(server.URL, client, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = source.Run(context.Background(), Request{Kind: KindComplete, Page: 1})
+	if !errors.Is(err, ErrUpstream) || !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("expected upstream timeout, got %v", err)
 	}
 }
 

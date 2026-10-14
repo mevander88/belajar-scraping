@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"errors"
+	"log"
 	"strconv"
 	"time"
 
@@ -156,6 +157,10 @@ func respondWithScraping(c fiber.Ctx, service ScrapingService, request scraper.R
 	}
 	response, err := service.Get(c.Context(), request)
 	if err != nil {
+		log.Printf(
+			"scraping request failed kind=%s slug=%q page=%d category=%s: %v",
+			request.Kind, request.Slug, request.Page, scrapingErrorCategory(err), err,
+		)
 		return mapScrapingError(err)
 	}
 	return c.JSON(response)
@@ -164,14 +169,33 @@ func respondWithScraping(c fiber.Ctx, service ScrapingService, request scraper.R
 func mapScrapingError(err error) error {
 	switch {
 	case errors.Is(err, scraper.ErrInvalidRequest):
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		return fiber.NewError(fiber.StatusBadRequest, "parameter request scraping tidak valid")
 	case errors.Is(err, scraper.ErrNotFound):
-		return fiber.NewError(fiber.StatusNotFound, err.Error())
+		return fiber.NewError(fiber.StatusNotFound, "konten tidak ditemukan pada website sumber")
 	case errors.Is(err, context.DeadlineExceeded):
 		return fiber.NewError(fiber.StatusGatewayTimeout, "website sumber melewati batas waktu")
-	case errors.Is(err, scraper.ErrUpstream), errors.Is(err, scraper.ErrInvalidContent):
-		return fiber.NewError(fiber.StatusBadGateway, err.Error())
+	case errors.Is(err, scraper.ErrUpstream):
+		return fiber.NewError(fiber.StatusBadGateway, "website sumber tidak dapat diakses")
+	case errors.Is(err, scraper.ErrInvalidContent):
+		return fiber.NewError(fiber.StatusBadGateway, "struktur website sumber tidak dapat diproses")
 	default:
 		return fiber.NewError(fiber.StatusInternalServerError, "internal server error")
+	}
+}
+
+func scrapingErrorCategory(err error) string {
+	switch {
+	case errors.Is(err, scraper.ErrInvalidRequest):
+		return "invalid_request"
+	case errors.Is(err, scraper.ErrNotFound):
+		return "not_found"
+	case errors.Is(err, context.DeadlineExceeded):
+		return "timeout"
+	case errors.Is(err, scraper.ErrUpstream):
+		return "upstream"
+	case errors.Is(err, scraper.ErrInvalidContent):
+		return "invalid_content"
+	default:
+		return "internal"
 	}
 }
