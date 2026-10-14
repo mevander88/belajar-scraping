@@ -12,7 +12,7 @@ export function Pagination({ current, last, basePath, params }: { current: numbe
   return (
     <nav aria-label="Paginasi" className="mt-14 flex flex-wrap items-center justify-between gap-4 border-y border-ink py-4">
       {current > 1 ? <Link className="eyebrow hover:text-accent-dark" href={hrefFor(basePath, current - 1, params)}>← Sebelumnya</Link> : <span />}
-      <div className="flex items-center gap-2">{pages.map((page, index) => <span key={page} className="flex items-center gap-2">{index > 0 && page - pages[index - 1] > 1 && <span aria-hidden="true">…</span>}<Link href={hrefFor(basePath, page, params)} aria-current={page === current ? "page" : undefined} className={`grid size-9 place-items-center text-sm font-bold ${page === current ? "bg-ink text-paper" : "border border-rule hover:border-ink"}`}>{page}</Link></span>)}</div>
+      <div className="flex items-center gap-2">{pages.map((page, index) => <span key={page} className="flex items-center gap-2">{index > 0 && page - pages[index - 1] > 1 && <span aria-hidden="true">…</span>}<Link href={hrefFor(basePath, page, params)} aria-current={page === current ? "page" : undefined} className={`grid size-11 place-items-center text-sm font-bold ${page === current ? "bg-ink text-paper" : "border border-rule hover:border-ink"}`}>{page}</Link></span>)}</div>
       {current < last ? <Link className="eyebrow hover:text-accent-dark" href={hrefFor(basePath, current + 1, params)}>Berikutnya →</Link> : <span />}
     </nav>
   );

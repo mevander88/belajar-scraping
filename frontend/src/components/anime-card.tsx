@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { AnimeCardData } from "@/lib/types";
-import { labelStatus } from "@/lib/query";
 
 export function AnimeCard({ anime, priority = false }: { anime: AnimeCardData; priority?: boolean }) {
   const note = anime.episode_text || anime.release_text || anime.schedule_text || anime.updated_text;
@@ -13,9 +12,8 @@ export function AnimeCard({ anime, priority = false }: { anime: AnimeCardData; p
           {anime.score && <span className="absolute right-0 top-0 bg-ink px-2.5 py-1.5 text-xs font-bold text-paper">★ {anime.score}</span>}
         </div>
         <div className="pt-4">
-          <p className="eyebrow mb-2 text-accent-dark">{labelStatus(anime.status)}</p>
-          <h3 className="font-display text-2xl leading-tight tracking-tight group-hover:text-accent-dark">{anime.title}</h3>
-          {note && <p className="mt-2 text-sm leading-6 text-muted">{note}</p>}
+          {note && <p className="eyebrow mb-2 text-accent-dark">{note}</p>}
+          <h3 className="font-display text-xl leading-tight tracking-tight group-hover:text-accent-dark sm:text-2xl">{anime.title}</h3>
           {anime.studio && <p className="mt-1 text-xs font-bold uppercase tracking-wider text-muted">{anime.studio}</p>}
         </div>
       </Link>

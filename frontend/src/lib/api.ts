@@ -1,6 +1,6 @@
 import type {
   AnimeCollection, AnimeDetail, ApiResponse, CatalogItem, EpisodeDetail,
-  Genre, HomeData, Readiness, ScheduleGroup,
+  Genre, HomeData, ScheduleGroup,
 } from "./types";
 
 const API_URL = (process.env.API_URL ?? "http://localhost:8080").replace(/\/$/, "");
@@ -43,13 +43,3 @@ export const getGenre = (slug: string, page: number) => apiFetch<ApiResponse<Ani
 export const getAnimeCollection = (status: "ongoing" | "complete", page: number) => apiFetch<ApiResponse<AnimeCollection>>(`/api/v1/source/anime?status=${status}&page=${page}`);
 export const getAnime = (slug: string) => apiFetch<ApiResponse<AnimeDetail>>(`/api/v1/source/anime/${encodeURIComponent(slug)}`);
 export const getEpisode = (slug: string) => apiFetch<ApiResponse<EpisodeDetail>>(`/api/v1/source/episodes/${encodeURIComponent(slug)}`);
-
-export async function getReadiness(): Promise<{ api: boolean; data: Readiness }> {
-  try {
-    const response = await fetch(`${API_URL}/api/v1/ready`, { cache: "no-store", signal: AbortSignal.timeout(3_000) });
-    const data = await response.json() as Readiness;
-    return { api: true, data };
-  } catch {
-    return { api: false, data: { status: "unavailable" } };
-  }
-}
