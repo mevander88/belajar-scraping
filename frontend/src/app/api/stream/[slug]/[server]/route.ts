@@ -1,6 +1,7 @@
 import { ApiError, getStream } from "@/lib/api";
 import { MAX_REDIRECTS, isAllowedMediaType, isAllowedMediaURL, isValidRange } from "@/lib/media-policy.mjs";
 import type { MediaStream } from "@/lib/types";
+import { CapacityError, streamCapacity } from "@/lib/capacity.mjs";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -69,10 +70,11 @@ function responseHeaders(upstream: Response) {
   return headers;
 }
 
-function streamingBody(body: ReadableStream<Uint8Array>, upstreamController: AbortController, requestSignal: AbortSignal) {
+function streamingBody(body: ReadableStream<Uint8Array>, upstreamController: AbortController, requestSignal: AbortSignal, releaseSlot: () => void) {
   const reader = body.getReader();
   const abortUpstream = () => upstreamController.abort(requestSignal.reason);
-  const cleanup = () => requestSignal.removeEventListener("abort", abortUpstream);
+  let cleaned = false;
+  const cleanup = () => { if (cleaned) return; cleaned = true; requestSignal.removeEventListener("abort", abortUpstream); releaseSlot(); };
   requestSignal.addEventListener("abort", abortUpstream, { once: true });
 
   return new ReadableStream<Uint8Array>({
@@ -103,7 +105,10 @@ async function proxyMedia(request: Request, context: Params, method: "GET" | "HE
   const range = request.headers.get("range");
   if (!isValidRange(range)) return errorResponse("Rentang video tidak valid.", 400);
 
+  let releaseSlot = () => {};
+  let bodyOwnsSlot = false;
   try {
+    releaseSlot = await streamCapacity.acquire(request.signal);
     let stream = await getStream(slug, server, false, request.signal);
     if (!validateResolvedStream(stream)) return errorResponse("Format video belum didukung.", 422);
 
@@ -133,14 +138,18 @@ async function proxyMedia(request: Request, context: Params, method: "GET" | "HE
       return errorResponse("Respons sumber bukan file video yang didukung.", 502);
     }
     if (method === "HEAD" || !upstream.body) return new Response(null, { status: upstream.status, headers });
-    return new Response(streamingBody(upstream.body, opened.controller, request.signal), { status: upstream.status, headers });
+    bodyOwnsSlot = true;
+    return new Response(streamingBody(upstream.body, opened.controller, request.signal, releaseSlot), { status: upstream.status, headers });
   } catch (error) {
+    if (error instanceof CapacityError) return errorResponse("Kapasitas streaming sedang penuh.", 503);
     if (error instanceof ApiError) {
       const status = [400, 404, 422].includes(error.status) ? error.status : 502;
       return errorResponse(error.message, status);
     }
     if (error instanceof DOMException && error.name === "TimeoutError") return errorResponse("Sumber video melewati batas waktu.", 504);
     return errorResponse("Video belum dapat dimuat.", 502);
+  } finally {
+    if (!bodyOwnsSlot) releaseSlot();
   }
 }
 

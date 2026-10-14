@@ -15,21 +15,27 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   redis:
     image: redis:8-alpine
     restart: unless-stopped
     ports:
       - "${REDIS_PORT:-6379}:6379"
-    volumes:
-      - redis_data:/data
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "${REDIS_MAXMEMORY:-256mb}", "--maxmemory-policy", "allkeys-lru"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 10
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   postgres_data:
-  redis_data:
 

@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -28,6 +29,16 @@ type Config struct {
 	CacheTTLEpisode       time.Duration
 	CacheTTLStream        time.Duration
 	StreamResolveTimeout  time.Duration
+	ScrapeMaxConcurrency  int
+	ScrapeMaxQueue        int
+	StreamMaxConcurrency  int
+	StreamMaxQueue        int
+	DatabaseMaxOpenConns  int
+	DatabaseMaxIdleConns  int
+	DatabaseConnLifetime  time.Duration
+	DatabaseConnIdleTime  time.Duration
+	RedisPoolSize         int
+	LocalCacheMaxBytes    int
 	AllowedOrigins        []string
 }
 
@@ -54,8 +65,27 @@ func Load() Config {
 		CacheTTLEpisode:       durationOrDefault("CACHE_TTL_EPISODE", 5*time.Minute),
 		CacheTTLStream:        durationOrDefault("CACHE_TTL_STREAM", 3*time.Minute),
 		StreamResolveTimeout:  durationOrDefault("STREAM_RESOLVE_TIMEOUT", 25*time.Second),
+		ScrapeMaxConcurrency:  intOrDefault("SCRAPE_MAX_CONCURRENCY", 4),
+		ScrapeMaxQueue:        intOrDefault("SCRAPE_MAX_QUEUE", 32),
+		StreamMaxConcurrency:  intOrDefault("STREAM_RESOLVE_MAX_CONCURRENCY", 2),
+		StreamMaxQueue:        intOrDefault("STREAM_RESOLVE_MAX_QUEUE", 16),
+		DatabaseMaxOpenConns:  intOrDefault("DATABASE_MAX_OPEN_CONNS", 10),
+		DatabaseMaxIdleConns:  intOrDefault("DATABASE_MAX_IDLE_CONNS", 5),
+		DatabaseConnLifetime:  durationOrDefault("DATABASE_CONN_MAX_LIFETIME", 30*time.Minute),
+		DatabaseConnIdleTime:  durationOrDefault("DATABASE_CONN_MAX_IDLE_TIME", 5*time.Minute),
+		RedisPoolSize:         intOrDefault("REDIS_POOL_SIZE", 10),
+		LocalCacheMaxBytes:    intOrDefault("LOCAL_CACHE_MAX_BYTES", 16<<20),
 		AllowedOrigins:        splitAndTrim(valueOrDefault("CORS_ALLOWED_ORIGINS", "http://localhost:3000")),
 	}
+}
+
+func intOrDefault(key string, fallback int) int {
+	value := strings.TrimSpace(os.Getenv(key))
+	parsed, err := strconv.Atoi(value)
+	if value == "" || err != nil || parsed < 0 {
+		return fallback
+	}
+	return parsed
 }
 
 func valueOrDefault(key, fallback string) string {

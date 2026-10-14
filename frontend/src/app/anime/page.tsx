@@ -9,7 +9,6 @@ import { positivePage } from "@/lib/query";
 import { notFound } from "next/navigation";
 
 export const metadata: Metadata = { title: "Daftar Anime" };
-export const dynamic = "force-dynamic";
 
 async function loadCollection(status: "ongoing" | "complete", page: number) {
   try {

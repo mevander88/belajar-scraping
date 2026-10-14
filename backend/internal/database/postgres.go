@@ -51,6 +51,21 @@ func Close(db *gorm.DB) error {
 	return nil
 }
 
+func ConfigurePool(db *gorm.DB, maxOpen, maxIdle int, maxLifetime, maxIdleTime time.Duration) error {
+	if db == nil {
+		return nil
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return fmt.Errorf("get PostgreSQL connection: %w", err)
+	}
+	sqlDB.SetMaxOpenConns(maxOpen)
+	sqlDB.SetMaxIdleConns(maxIdle)
+	sqlDB.SetConnMaxLifetime(maxLifetime)
+	sqlDB.SetConnMaxIdleTime(maxIdleTime)
+	return nil
+}
+
 // Migrate is the single entry point for application schema migrations.
 func Migrate(db *gorm.DB) error {
 	if db == nil {

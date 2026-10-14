@@ -7,7 +7,6 @@ import { StreamPlayer } from "@/components/stream-player";
 import { ApiError, getEpisode } from "@/lib/api";
 
 type Props = { params: Promise<{ slug: string }> };
-export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;

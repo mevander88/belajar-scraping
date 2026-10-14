@@ -8,7 +8,6 @@ import { ApiError, getGenre } from "@/lib/api";
 import { positivePage } from "@/lib/query";
 
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ page?: string | string[] }> };
-export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }: Props): Promise<Metadata> { const { slug } = await params; return { title: `Genre ${decodeURIComponent(slug).replaceAll("-", " ")}` }; }
 async function loadGenre(slug: string, page: number) {
   try { return await getGenre(slug, page); }

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/mevander88/belajar-scraping/backend/internal/cache"
+	"github.com/mevander88/belajar-scraping/backend/internal/capacity"
 	"github.com/mevander88/belajar-scraping/backend/internal/config"
 	"github.com/mevander88/belajar-scraping/backend/internal/database"
 	"github.com/mevander88/belajar-scraping/backend/internal/scraper"
@@ -24,6 +25,9 @@ func main() {
 	if err != nil {
 		log.Printf("database unavailable: %v", err)
 	} else {
+		if err := database.ConfigurePool(db, cfg.DatabaseMaxOpenConns, cfg.DatabaseMaxIdleConns, cfg.DatabaseConnLifetime, cfg.DatabaseConnIdleTime); err != nil {
+			log.Printf("configure database pool: %v", err)
+		}
 		log.Println("database connection established")
 		if err := database.Migrate(db); err != nil {
 			log.Printf("database migration failed: %v", err)
@@ -42,19 +46,25 @@ func main() {
 	}
 
 	cacheContext, cancelCacheConnect := context.WithTimeout(context.Background(), 3*time.Second)
-	redisStore, err := cache.Open(cacheContext, cfg.RedisURL, cfg.RedisKeyPrefix)
+	redisStore, err := cache.Open(cacheContext, cfg.RedisURL, cfg.RedisKeyPrefix, cfg.RedisPoolSize)
 	cancelCacheConnect()
+	redisReady := false
 	if err != nil {
-		log.Printf("Redis unavailable; scraping will continue without cache: %v", err)
+		log.Printf("Redis configuration invalid; scraping will continue without cache: %v", err)
 		redisStore = nil
 	} else {
-		log.Println("Redis connection established")
+		if pingErr := redisStore.Ping(context.Background()); pingErr != nil {
+			log.Printf("Redis unavailable; client will keep reconnecting: %v", pingErr)
+		} else {
+			redisReady = true
+			log.Println("Redis connection established")
+		}
 		defer redisStore.Close()
 	}
-	var scrapingCache scraping.Cache
+	localCache := cache.NewMemory(cfg.LocalCacheMaxBytes)
+	var scrapingCache scraping.Cache = cache.NewTiered(redisStore, localCache, redisReady)
 	var cacheHealth server.CacheHealth
 	if redisStore != nil {
-		scrapingCache = redisStore
 		cacheHealth = redisStore
 	}
 
@@ -82,8 +92,9 @@ func main() {
 		},
 		CompleteAnimeTTL: cfg.CacheTTLAnimeComplete,
 		StaleTTL:         cfg.CacheStaleTTL,
+		Limiter:          capacity.New(cfg.ScrapeMaxConcurrency, cfg.ScrapeMaxQueue),
 	})
-	streamingService := streaming.New(source, scrapingCache, cfg.CacheTTLStream, cfg.StreamResolveTimeout)
+	streamingService := streaming.New(source, scrapingCache, cfg.CacheTTLStream, cfg.StreamResolveTimeout, capacity.New(cfg.StreamMaxConcurrency, cfg.StreamMaxQueue))
 
 	app := server.NewWithDependencies(server.Dependencies{
 		Database: db, Cache: cacheHealth, Scraping: scrapingService, Streams: streamingService, AllowedOrigins: cfg.AllowedOrigins,
