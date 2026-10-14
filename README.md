@@ -6,13 +6,13 @@ Fondasi monorepo untuk aplikasi scraping dengan Next.js pada frontend, Go Fiber 
 
 - Node.js 24 LTS
 - Go 1.26 atau versi kompatibel yang lebih baru
-- PostgreSQL 18, atau Docker dengan Docker Compose
+- PostgreSQL 18 dan Redis 8, atau Docker dengan Docker Compose
 
 ## Struktur
 
 ```text
 frontend/   Aplikasi Next.js
-backend/    API Go Fiber dan akses PostgreSQL melalui GORM
+backend/    API Go Fiber, scraper Goquery, cache Redis, dan akses PostgreSQL melalui GORM
 compose.yaml
 ```
 
@@ -26,7 +26,7 @@ compose.yaml
    cp frontend/.env.example frontend/.env.local
    ```
 
-2. Jalankan PostgreSQL dengan `docker compose up -d postgres`, atau sesuaikan `DATABASE_URL` jika PostgreSQL sudah tersedia secara lokal.
+2. Jalankan PostgreSQL dan Redis dengan `docker compose up -d postgres redis`, atau sesuaikan `DATABASE_URL` dan `REDIS_URL` jika keduanya sudah tersedia secara lokal.
 
 3. Jalankan backend:
 
@@ -48,7 +48,22 @@ compose.yaml
 ## Endpoint awal
 
 - `GET /api/v1/health` memeriksa proses API.
-- `GET /api/v1/ready` memeriksa kesiapan API dan koneksi PostgreSQL.
+- `GET /api/v1/ready` memeriksa koneksi PostgreSQL dan Redis.
+
+## Endpoint scraping
+
+- `GET /api/v1/source/home`
+- `GET /api/v1/source/catalog`
+- `GET /api/v1/source/schedule`
+- `GET /api/v1/source/genres`
+- `GET /api/v1/source/genres/{slug}?page=1`
+- `GET /api/v1/source/anime?status=ongoing&page=1`
+- `GET /api/v1/source/anime/{slug}`
+- `GET /api/v1/source/episodes/{slug}`
+
+Respons memiliki metadata sumber, waktu pengambilan, jumlah data, dan kondisi cache: `hit`, `miss`, `stale`, atau `bypass`. Jika website sumber gagal diakses, backend memakai salinan cache lama ketika tersedia. Jika Redis tidak tersedia, backend tetap mengambil data langsung dari sumber.
+
+Koneksi sumber, batas waktu, jeda permintaan, dan masa berlaku cache per kategori dapat diatur melalui variabel pada `backend/.env.example`.
 
 ## Migrasi schema
 
