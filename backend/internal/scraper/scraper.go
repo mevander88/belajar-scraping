@@ -13,6 +13,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -475,7 +477,23 @@ func cleanText(value string) string {
 }
 
 var numericPattern = regexp.MustCompile(`^[0-9]+(?:\.[0-9]+)?$`)
-var slugPattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9-]*$`)
+
+func validSlug(slug string) bool {
+	if slug == "" || slug == "." || slug == ".." || !utf8.ValidString(slug) {
+		return false
+	}
+
+	for index, character := range slug {
+		if index == 0 && !unicode.IsLetter(character) && !unicode.IsDigit(character) {
+			return false
+		}
+		if unicode.IsLetter(character) || unicode.IsDigit(character) || unicode.IsMark(character) || unicode.IsSymbol(character) || character == '-' {
+			continue
+		}
+		return false
+	}
+	return true
+}
 
 func ValidateRequest(request Request) error {
 	switch request.Kind {
@@ -484,7 +502,7 @@ func ValidateRequest(request Request) error {
 			return fmt.Errorf("%w: slug is not supported for %s", ErrInvalidRequest, request.Kind)
 		}
 	case KindGenre, KindAnime, KindEpisode:
-		if !slugPattern.MatchString(request.Slug) {
+		if !validSlug(request.Slug) {
 			return fmt.Errorf("%w: a valid slug is required for %s", ErrInvalidRequest, request.Kind)
 		}
 	default:

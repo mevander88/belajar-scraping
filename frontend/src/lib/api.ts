@@ -37,11 +37,21 @@ async function apiFetch<T>(path: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+function encodeSlug(slug: string): string {
+  try {
+    const decoded = decodeURIComponent(slug);
+    if (!decoded || decoded.includes("/") || decoded.includes("\\")) throw new Error("invalid path segment");
+    return encodeURIComponent(decoded);
+  } catch {
+    throw new ApiError(400, "Alamat konten tidak valid.");
+  }
+}
+
 export const getHome = () => apiFetch<ApiResponse<HomeData>>("/api/v1/source/home");
 export const getCatalog = () => apiFetch<ApiResponse<CatalogItem[]>>("/api/v1/source/catalog");
 export const getSchedule = () => apiFetch<ApiResponse<ScheduleGroup[]>>("/api/v1/source/schedule");
 export const getGenres = () => apiFetch<ApiResponse<Genre[]>>("/api/v1/source/genres");
-export const getGenre = (slug: string, page: number) => apiFetch<ApiResponse<AnimeCollection>>(`/api/v1/source/genres/${encodeURIComponent(slug)}?page=${page}`);
+export const getGenre = (slug: string, page: number) => apiFetch<ApiResponse<AnimeCollection>>(`/api/v1/source/genres/${encodeSlug(slug)}?page=${page}`);
 export const getAnimeCollection = (status: "ongoing" | "complete", page: number) => apiFetch<ApiResponse<AnimeCollection>>(`/api/v1/source/anime?status=${status}&page=${page}`);
-export const getAnime = (slug: string) => apiFetch<ApiResponse<AnimeDetail>>(`/api/v1/source/anime/${encodeURIComponent(slug)}`);
-export const getEpisode = (slug: string) => apiFetch<ApiResponse<EpisodeDetail>>(`/api/v1/source/episodes/${encodeURIComponent(slug)}`);
+export const getAnime = (slug: string) => apiFetch<ApiResponse<AnimeDetail>>(`/api/v1/source/anime/${encodeSlug(slug)}`);
+export const getEpisode = (slug: string) => apiFetch<ApiResponse<EpisodeDetail>>(`/api/v1/source/episodes/${encodeSlug(slug)}`);
