@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"reflect"
 	"strings"
 	"testing"
@@ -50,6 +51,91 @@ func TestParseGenreCards(t *testing.T) {
 	}
 	if len(items[0].Genres) != 1 || items[0].Genres[0].Slug != "action" {
 		t.Fatalf("unexpected card genres: %#v", items[0].Genres)
+	}
+}
+
+func TestParseSearchResults(t *testing.T) {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(`
+		<ul class="chivsrc">
+			<li>
+				<img src="https://otakudesu.blog/wp-content/uploads/boruto.jpg">
+				<h2><a href="https://otakudesu.blog/anime/borot-sub-indo/">Boruto Subtitle Indonesia</a></h2>
+				<div class="set"><b>Genres</b> : <a href="https://otakudesu.blog/genres/action/">Action</a></div>
+				<div class="set"><b>Status</b> : Drop</div>
+				<div class="set"><b>Rating</b> : 6.15</div>
+			</li>
+			<li><h2>Item tanpa tautan</h2></li>
+		</ul>`))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	items := parseSearchResults(doc.Selection)
+	if len(items) != 1 {
+		t.Fatalf("expected one valid result, got %#v", items)
+	}
+	item := items[0]
+	if item.Slug != "borot-sub-indo" || item.Status != "drop" || item.Score != "6.15" || len(item.Genres) != 1 {
+		t.Fatalf("unexpected search result: %#v", item)
+	}
+}
+
+func TestRunSearchUsesEncodedQueryAndAcceptsEmptyResults(t *testing.T) {
+	var receivedQuery url.Values
+	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		receivedQuery = request.URL.Query()
+		response.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = response.Write([]byte(`<title>You searched for one piece | Otaku Desu</title><ul class="chivsrc"></ul>`))
+	}))
+	defer server.Close()
+
+	source, err := NewWithConfig(server.URL, server.Client(), 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response, err := source.Run(context.Background(), Request{Kind: KindSearch, Query: "  one   piece  ", Page: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if receivedQuery.Get("s") != "one piece" || receivedQuery.Get("post_type") != "anime" {
+		t.Fatalf("unexpected source query: %v", receivedQuery)
+	}
+	data, ok := response.Data.(SearchData)
+	if !ok || data.Query != "one piece" || len(data.Items) != 0 || data.MaxResults != 12 {
+		t.Fatalf("unexpected empty search response: %#v", response.Data)
+	}
+}
+
+func TestRunSearchRejectsPageWithoutSearchMarker(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
+		response.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = response.Write([]byte(`<title>Otaku Desu</title><div class="detpost"></div>`))
+	}))
+	defer server.Close()
+
+	source, err := NewWithConfig(server.URL, server.Client(), 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = source.Run(context.Background(), Request{Kind: KindSearch, Query: "naruto", Page: 1})
+	if !errors.Is(err, ErrInvalidContent) {
+		t.Fatalf("expected invalid content error, got %v", err)
+	}
+}
+
+func TestValidateSearchRequest(t *testing.T) {
+	valid := Request{Kind: KindSearch, Query: "naruto", Page: 1}
+	if err := ValidateRequest(valid); err != nil {
+		t.Fatalf("expected valid search request, got %v", err)
+	}
+	for _, request := range []Request{
+		{Kind: KindSearch, Query: "   ", Page: 1},
+		{Kind: KindSearch, Query: "naruto", Slug: "unexpected", Page: 1},
+		{Kind: KindSearch, Query: "naruto", Page: 2},
+	} {
+		if !errors.Is(ValidateRequest(request), ErrInvalidRequest) {
+			t.Fatalf("expected invalid search request: %#v", request)
+		}
 	}
 }
 

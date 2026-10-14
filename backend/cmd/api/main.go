@@ -62,6 +62,7 @@ func main() {
 			scraper.KindOngoing:  cfg.CacheTTLCollection,
 			scraper.KindComplete: cfg.CacheTTLCollection,
 			scraper.KindGenre:    cfg.CacheTTLCollection,
+			scraper.KindSearch:   cfg.CacheTTLSearch,
 			scraper.KindAnime:    cfg.CacheTTLAnime,
 			scraper.KindEpisode:  cfg.CacheTTLEpisode,
 		},

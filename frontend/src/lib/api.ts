@@ -1,6 +1,6 @@
 import type {
   AnimeCollection, AnimeDetail, ApiResponse, CatalogItem, EpisodeDetail,
-  Genre, HomeData, ScheduleGroup,
+  Genre, HomeData, ScheduleGroup, SearchData,
 } from "./types";
 
 const API_URL = (process.env.API_URL ?? "http://localhost:8080").replace(/\/$/, "");
@@ -41,6 +41,7 @@ export const getHome = () => apiFetch<ApiResponse<HomeData>>("/api/v1/source/hom
 export const getCatalog = () => apiFetch<ApiResponse<CatalogItem[]>>("/api/v1/source/catalog");
 export const getSchedule = () => apiFetch<ApiResponse<ScheduleGroup[]>>("/api/v1/source/schedule");
 export const getGenres = () => apiFetch<ApiResponse<Genre[]>>("/api/v1/source/genres");
+export const getSearch = (query: string) => apiFetch<ApiResponse<SearchData>>(`/api/v1/source/search?${new URLSearchParams({ query })}`);
 export const getGenre = (slug: string, page: number) => apiFetch<ApiResponse<AnimeCollection>>(`/api/v1/source/genres/${encodeURIComponent(slug)}?page=${page}`);
 export const getAnimeCollection = (status: "ongoing" | "complete", page: number) => apiFetch<ApiResponse<AnimeCollection>>(`/api/v1/source/anime?status=${status}&page=${page}`);
 export const getAnime = (slug: string) => apiFetch<ApiResponse<AnimeDetail>>(`/api/v1/source/anime/${encodeURIComponent(slug)}`);

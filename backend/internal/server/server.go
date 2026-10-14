@@ -101,12 +101,27 @@ func NewWithDependencies(dependencies Dependencies) *fiber.App {
 	source.Get("/catalog", scrapeHandler(dependencies.Scraping, scraper.KindCatalog, false))
 	source.Get("/schedule", scrapeHandler(dependencies.Scraping, scraper.KindSchedule, false))
 	source.Get("/genres", scrapeHandler(dependencies.Scraping, scraper.KindGenres, false))
+	source.Get("/search", searchHandler(dependencies.Scraping))
 	source.Get("/genres/:slug", scrapeHandler(dependencies.Scraping, scraper.KindGenre, true))
 	source.Get("/anime", animeCollectionHandler(dependencies.Scraping))
 	source.Get("/anime/:slug", scrapeHandler(dependencies.Scraping, scraper.KindAnime, true))
 	source.Get("/episodes/:slug", scrapeHandler(dependencies.Scraping, scraper.KindEpisode, true))
 
 	return app
+}
+
+func searchHandler(service ScrapingService) fiber.Handler {
+	return func(c fiber.Ctx) error {
+		query := scraper.NormalizeSearchQuery(c.Query("query"))
+		if query == "" {
+			return fiber.NewError(fiber.StatusBadRequest, "parameter query wajib diisi")
+		}
+		return respondWithScraping(c, service, scraper.Request{
+			Kind:  scraper.KindSearch,
+			Query: query,
+			Page:  1,
+		})
+	}
 }
 
 func scrapeHandler(service ScrapingService, kind scraper.ContentKind, needsSlug bool) fiber.Handler {
@@ -158,8 +173,8 @@ func respondWithScraping(c fiber.Ctx, service ScrapingService, request scraper.R
 	response, err := service.Get(c.Context(), request)
 	if err != nil {
 		log.Printf(
-			"scraping request failed kind=%s slug=%q page=%d category=%s: %v",
-			request.Kind, request.Slug, request.Page, scrapingErrorCategory(err), err,
+			"scraping request failed kind=%s slug=%q query=%q page=%d category=%s: %v",
+			request.Kind, request.Slug, request.Query, request.Page, scrapingErrorCategory(err), err,
 		)
 		return mapScrapingError(err)
 	}

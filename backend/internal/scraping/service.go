@@ -40,6 +40,9 @@ func New(source Source, cache Cache, policy Policy) *Service {
 }
 
 func (s *Service) Get(ctx context.Context, request scraper.Request) (scraper.Response, error) {
+	if request.Kind == scraper.KindSearch {
+		request.Query = scraper.NormalizeSearchQuery(request.Query)
+	}
 	if request.Page == 0 {
 		request.Page = 1
 	}
@@ -118,7 +121,11 @@ func (s *Service) ttl(kind scraper.ContentKind, response scraper.Response) time.
 }
 
 func cacheKey(request scraper.Request) string {
-	return "source:" + string(request.Kind) + ":" + url.QueryEscape(request.Slug) + ":page:" + strconv.Itoa(request.Page)
+	identity := request.Slug
+	if request.Kind == scraper.KindSearch {
+		identity = scraper.NormalizeSearchQuery(request.Query)
+	}
+	return "source:" + string(request.Kind) + ":" + url.QueryEscape(identity) + ":page:" + strconv.Itoa(request.Page)
 }
 
 func decodeResponse(payload []byte) (scraper.Response, error) {
