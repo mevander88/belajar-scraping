@@ -6,6 +6,7 @@ import (
 	"log"
 	"strconv"
 	"time"
+	"unicode/utf8"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/cors"
@@ -17,11 +18,12 @@ import (
 )
 
 type healthResponse struct {
-	Status    string `json:"status"`
-	Service   string `json:"service"`
-	Database  string `json:"database,omitempty"`
-	Redis     string `json:"redis,omitempty"`
-	Timestamp string `json:"timestamp"`
+	Status    string   `json:"status"`
+	Service   string   `json:"service"`
+	Database  string   `json:"database,omitempty"`
+	Redis     string   `json:"redis,omitempty"`
+	Message   []string `json:"message,omitempty"`
+	Timestamp string   `json:"timestamp"`
 }
 
 type CacheHealth interface {
@@ -92,8 +94,9 @@ func NewWithDependencies(dependencies Dependencies) *fiber.App {
 			messages = append(messages, err.Error())
 		}
 		if len(messages) > 0 {
-			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
-				"status": "unavailable", "database": databaseStatus, "redis": redisStatus, "message": messages,
+			return c.JSON(healthResponse{
+				Status: "degraded", Service: "belajar-scraping-api", Database: databaseStatus, Redis: redisStatus,
+				Message: messages, Timestamp: time.Now().UTC().Format(time.RFC3339),
 			})
 		}
 		return c.JSON(healthResponse{
@@ -145,8 +148,8 @@ func streamHandler(resolver StreamResolver) fiber.Handler {
 func searchHandler(service ScrapingService) fiber.Handler {
 	return func(c fiber.Ctx) error {
 		query := scraper.NormalizeSearchQuery(c.Query("query"))
-		if query == "" {
-			return fiber.NewError(fiber.StatusBadRequest, "parameter query wajib diisi")
+		if query == "" || utf8.RuneCountInString(query) > scraper.MaxSearchQueryRunes {
+			return fiber.NewError(fiber.StatusBadRequest, "parameter query wajib diisi dan maksimal 100 karakter")
 		}
 		return respondWithScraping(c, service, scraper.Request{
 			Kind:  scraper.KindSearch,
@@ -192,8 +195,8 @@ func animeCollectionHandler(service ScrapingService) fiber.Handler {
 func requestPage(c fiber.Ctx) (int, error) {
 	rawPage := c.Query("page", "1")
 	page, err := strconv.Atoi(rawPage)
-	if err != nil || page < 1 {
-		return 0, fiber.NewError(fiber.StatusBadRequest, "page must be a positive integer")
+	if err != nil || page < 1 || page > scraper.MaxPage {
+		return 0, fiber.NewError(fiber.StatusBadRequest, "page must be between 1 and 1000")
 	}
 	return page, nil
 }

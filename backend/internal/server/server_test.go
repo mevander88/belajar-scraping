@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/mevander88/belajar-scraping/backend/internal/scraper"
@@ -104,15 +105,22 @@ func TestHealthEndpoint(t *testing.T) {
 	}
 }
 
-func TestReadinessEndpointReportsMissingDatabase(t *testing.T) {
+func TestReadinessEndpointReportsOptionalDependenciesAsDegraded(t *testing.T) {
 	app := New(nil, []string{"http://localhost:3000"})
 	response, err := app.Test(newRequest("/api/v1/ready"))
 	if err != nil {
 		t.Fatalf("request readiness endpoint: %v", err)
 	}
 	defer response.Body.Close()
-	if response.StatusCode != http.StatusServiceUnavailable {
-		t.Fatalf("expected status %d, got %d", http.StatusServiceUnavailable, response.StatusCode)
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, response.StatusCode)
+	}
+	var payload healthResponse
+	if err := json.NewDecoder(response.Body).Decode(&payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload.Status != "degraded" || payload.Database != "disconnected" || payload.Redis != "disconnected" {
+		t.Fatalf("unexpected readiness response: %#v", payload)
 	}
 }
 
@@ -195,6 +203,24 @@ func TestSearchEndpointRejectsEmptyQuery(t *testing.T) {
 	}
 	if scrapingService.request.Kind != "" {
 		t.Fatalf("expected service not to be called, got %#v", scrapingService.request)
+	}
+}
+
+func TestEndpointsRejectOversizedInput(t *testing.T) {
+	service := &fakeScrapingService{}
+	app := NewWithDependencies(Dependencies{Scraping: service})
+	for _, path := range []string{
+		"/api/v1/source/search?query=" + strings.Repeat("a", scraper.MaxSearchQueryRunes+1),
+		"/api/v1/source/anime?status=ongoing&page=1001",
+	} {
+		response, err := app.Test(newRequest(path))
+		if err != nil {
+			t.Fatal(err)
+		}
+		response.Body.Close()
+		if response.StatusCode != http.StatusBadRequest {
+			t.Fatalf("expected bad request for %s, got %d", path, response.StatusCode)
+		}
 	}
 }
 

@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -98,6 +100,65 @@ func TestServiceUsesStaleCacheWhenSourceFails(t *testing.T) {
 	}
 	if response.Meta.Cache != "stale" || len(response.Meta.Warnings) == 0 {
 		t.Fatalf("expected stale response with warning, got %#v", response.Meta)
+	}
+}
+
+func TestServiceDoesNotUseStaleCacheForNotFound(t *testing.T) {
+	payload, _ := json.Marshal(sampleResponse())
+	service := New(&fakeSource{err: scraper.ErrNotFound}, &fakeCache{stale: payload}, Policy{})
+
+	_, err := service.Get(context.Background(), scraper.Request{Kind: scraper.KindHome, Page: 1})
+	if !errors.Is(err, scraper.ErrNotFound) {
+		t.Fatalf("expected not found error, got %v", err)
+	}
+}
+
+type blockingScrapingSource struct {
+	calls   atomic.Int32
+	started chan struct{}
+	release chan struct{}
+}
+
+func (s *blockingScrapingSource) Run(ctx context.Context, _ scraper.Request) (scraper.Response, error) {
+	if s.calls.Add(1) == 1 {
+		close(s.started)
+	}
+	select {
+	case <-ctx.Done():
+		return scraper.Response{}, ctx.Err()
+	case <-s.release:
+		return sampleResponse(), nil
+	}
+}
+
+func TestServiceCoalescesConcurrentCacheMisses(t *testing.T) {
+	source := &blockingScrapingSource{started: make(chan struct{}), release: make(chan struct{})}
+	service := New(source, nil, Policy{})
+	const callers = 6
+	results := make(chan error, callers)
+	var ready sync.WaitGroup
+	ready.Add(callers)
+	start := make(chan struct{})
+	for range callers {
+		go func() {
+			ready.Done()
+			<-start
+			_, err := service.Get(context.Background(), scraper.Request{Kind: scraper.KindHome, Page: 1})
+			results <- err
+		}()
+	}
+	ready.Wait()
+	close(start)
+	<-source.started
+	time.Sleep(10 * time.Millisecond)
+	close(source.release)
+	for range callers {
+		if err := <-results; err != nil {
+			t.Fatal(err)
+		}
+	}
+	if source.calls.Load() != 1 {
+		t.Fatalf("expected one source call, got %d", source.calls.Load())
 	}
 }
 

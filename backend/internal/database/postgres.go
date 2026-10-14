@@ -37,6 +37,20 @@ func Ping(db *gorm.DB) error {
 	return nil
 }
 
+func Close(db *gorm.DB) error {
+	if db == nil {
+		return nil
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return fmt.Errorf("get PostgreSQL connection: %w", err)
+	}
+	if err := sqlDB.Close(); err != nil {
+		return fmt.Errorf("close PostgreSQL connection: %w", err)
+	}
+	return nil
+}
+
 // Migrate is the single entry point for application schema migrations.
 func Migrate(db *gorm.DB) error {
 	if db == nil {

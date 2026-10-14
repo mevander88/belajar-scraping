@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import type {
   AnimeCollection, AnimeDetail, ApiResponse, CatalogItem, EpisodeDetail,
   Genre, HomeData, ScheduleGroup, SearchData, MediaStream,
@@ -8,6 +10,7 @@ import type {
 const API_URL = (process.env.API_URL ?? "http://localhost:8080").replace(/\/$/, "");
 // Beri backend waktu menyelesaikan timeout scraping (20 detik) dan fallback cache stale.
 const API_TIMEOUT_MS = 25_000;
+const STREAM_RESOLUTION_TIMEOUT_MS = 30_000;
 
 export class ApiError extends Error {
   constructor(public readonly status: number, message: string) {
@@ -16,12 +19,12 @@ export class ApiError extends Error {
   }
 }
 
-async function apiFetch<T>(path: string, signal?: AbortSignal): Promise<T> {
+async function apiFetch<T>(path: string, signal?: AbortSignal, timeoutMs = API_TIMEOUT_MS): Promise<T> {
   let response: Response;
   try {
     response = await fetch(`${API_URL}${path}`, {
       cache: "no-store",
-      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(API_TIMEOUT_MS)]) : AbortSignal.timeout(API_TIMEOUT_MS),
+      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs),
     });
   } catch {
     throw new ApiError(503, "Layanan data belum dapat dihubungi.");
@@ -56,9 +59,9 @@ export const getGenres = () => apiFetch<ApiResponse<Genre[]>>("/api/v1/source/ge
 export const getSearch = (query: string) => apiFetch<ApiResponse<SearchData>>(`/api/v1/source/search?${new URLSearchParams({ query })}`);
 export const getGenre = (slug: string, page: number) => apiFetch<ApiResponse<AnimeCollection>>(`/api/v1/source/genres/${encodeSlug(slug)}?page=${page}`);
 export const getAnimeCollection = (status: "ongoing" | "complete", page: number) => apiFetch<ApiResponse<AnimeCollection>>(`/api/v1/source/anime?status=${status}&page=${page}`);
-export const getAnime = (slug: string) => apiFetch<ApiResponse<AnimeDetail>>(`/api/v1/source/anime/${encodeSlug(slug)}`);
-export const getEpisode = (slug: string) => apiFetch<ApiResponse<EpisodeDetail>>(`/api/v1/source/episodes/${encodeSlug(slug)}`);
+export const getAnime = cache((slug: string) => apiFetch<ApiResponse<AnimeDetail>>(`/api/v1/source/anime/${encodeSlug(slug)}`));
+export const getEpisode = cache((slug: string) => apiFetch<ApiResponse<EpisodeDetail>>(`/api/v1/source/episodes/${encodeSlug(slug)}`));
 export const getStream = (slug: string, serverID: string, refresh = false, signal?: AbortSignal) => {
   const query = refresh ? "?refresh=true" : "";
-  return apiFetch<MediaStream>(`/api/v1/source/episodes/${encodeSlug(slug)}/streams/${encodeSlug(serverID)}${query}`, signal);
+  return apiFetch<MediaStream>(`/api/v1/source/episodes/${encodeSlug(slug)}/streams/${encodeSlug(serverID)}${query}`, signal, STREAM_RESOLUTION_TIMEOUT_MS);
 };

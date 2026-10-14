@@ -32,7 +32,7 @@ export default async function EpisodePage({ params }: Props) {
         <p className="eyebrow text-accent-dark">Episode anime</p>
         <h1 className="display-title mt-3 max-w-5xl text-[clamp(2.5rem,5vw,5rem)] text-balance">{episode.title}</h1>
       </header>
-      <StreamPlayer servers={episode.servers} slug={episode.slug} title={episode.title} />
+      <StreamPlayer key={episode.slug} servers={episode.servers} slug={episode.slug} title={episode.title} />
 
       <div className="mt-12 grid gap-12 lg:grid-cols-2">
         <section>

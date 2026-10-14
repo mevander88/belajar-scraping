@@ -132,9 +132,21 @@ func TestValidateSearchRequest(t *testing.T) {
 		{Kind: KindSearch, Query: "   ", Page: 1},
 		{Kind: KindSearch, Query: "naruto", Slug: "unexpected", Page: 1},
 		{Kind: KindSearch, Query: "naruto", Page: 2},
+		{Kind: KindSearch, Query: strings.Repeat("a", MaxSearchQueryRunes+1), Page: 1},
 	} {
 		if !errors.Is(ValidateRequest(request), ErrInvalidRequest) {
 			t.Fatalf("expected invalid search request: %#v", request)
+		}
+	}
+}
+
+func TestValidateRequestRejectsOversizedPageAndSlug(t *testing.T) {
+	for _, request := range []Request{
+		{Kind: KindOngoing, Page: MaxPage + 1},
+		{Kind: KindAnime, Slug: strings.Repeat("a", MaxSlugRunes+1), Page: 1},
+	} {
+		if !errors.Is(ValidateRequest(request), ErrInvalidRequest) {
+			t.Fatalf("expected invalid request: %#v", request)
 		}
 	}
 }
@@ -214,6 +226,16 @@ func TestDirectMediaAllowlistRejectsEmbedAndUnknownHosts(t *testing.T) {
 	}
 	if !allowedMediaURL("https://cdn.odcloud.net/anime/example.mp4") {
 		t.Fatal("expected known direct media host to be accepted")
+	}
+}
+
+func TestClassifyDirectMediaSupportsOnlyPlayerFileFormats(t *testing.T) {
+	contentType, kind, err := classifyDirectMedia("https://cdn.odcloud.net/anime/example.mp4?token=short-lived")
+	if err != nil || contentType != "video/mp4" || kind != "file" {
+		t.Fatalf("unexpected MP4 classification: type=%q kind=%q err=%v", contentType, kind, err)
+	}
+	if _, _, err := classifyDirectMedia("https://cdn.odcloud.net/anime/example.m3u8"); !errors.Is(err, ErrStreamUnsupported) {
+		t.Fatalf("expected HLS to remain unsupported, got %v", err)
 	}
 }
 
