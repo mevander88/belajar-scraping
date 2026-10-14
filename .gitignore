@@ -16,3 +16,6 @@ backend/bin/
 .DS_Store
 Thumbs.db
 
+# Local planning notes
+issue.md
+
