@@ -1,8 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { resolveStream } from "@/app/episode/actions";
-import type { MediaStream, StreamServer } from "@/lib/types";
+import { useMemo, useRef, useState } from "react";
+import type { StreamServer } from "@/lib/types";
 
 type Props = { servers: StreamServer[]; slug: string; title: string };
 
@@ -20,45 +19,27 @@ export function StreamPlayer({ servers, slug, title }: Props) {
     [servers],
   );
   const [selectedID, setSelectedID] = useState(initialServer?.id ?? "");
-  const [stream, setStream] = useState<MediaStream>();
-  const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">(initialServer ? "loading" : "idle");
   const [message, setMessage] = useState("");
+  const [failed, setFailed] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [muted, setMuted] = useState(false);
   const [volume, setVolume] = useState(1);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
-  const chooseServer = useCallback(async (server: StreamServer) => {
+  const streamURL = selectedID ? `/api/stream/${encodeURIComponent(slug)}/${encodeURIComponent(selectedID)}` : "";
+
+  const chooseServer = (server: StreamServer) => {
     if (!server.supported) return;
     setSelectedID(server.id);
     setStatus("loading");
     setMessage("");
-    setStream(undefined);
+    setFailed(false);
     setPlaying(false);
     setCurrentTime(0);
     setDuration(0);
-    const result = await resolveStream(slug, server.id);
-    if (result.stream) {
-      setStream(result.stream);
-      setStatus("ready");
-    } else {
-      setStatus("error");
-      setMessage(result.error ?? "Video belum dapat dimuat. Coba server lain.");
-    }
-  }, [slug]);
-
-  useEffect(() => {
-    if (!initialServer) return;
-    const task = window.setTimeout(() => void chooseServer(initialServer), 0);
-    return () => window.clearTimeout(task);
-  }, [chooseServer, initialServer]);
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !stream) return;
-    video.load();
-  }, [stream]);
+  };
 
   const togglePlayback = async () => {
     const video = videoRef.current;
@@ -97,8 +78,8 @@ export function StreamPlayer({ servers, slug, title }: Props) {
             <button
               key={server.id}
               type="button"
-              disabled={!server.supported || status === "loading"}
-              onClick={() => void chooseServer(server)}
+              disabled={!server.supported}
+              onClick={() => chooseServer(server)}
               aria-pressed={selectedID === server.id}
               title={server.supported ? `${server.quality} melalui ${server.provider}` : "Media langsung belum didukung"}
               className={`min-h-11 border px-3 py-2 text-sm font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${selectedID === server.id ? "border-ink bg-ink text-paper" : "border-rule hover:border-ink"}`}
@@ -110,20 +91,23 @@ export function StreamPlayer({ servers, slug, title }: Props) {
       </div>
 
       <div ref={playerRef} tabIndex={0} onKeyDown={handleKeyDown} className="group relative aspect-video overflow-hidden bg-black text-white focus-visible:outline-offset-4">
-        {stream ? (
+        {streamURL && !failed ? (
           <video
+            key={streamURL}
             ref={videoRef}
             className="h-full w-full"
             preload="metadata"
             playsInline
-            src={stream.url}
+            src={streamURL}
             aria-label={title}
+            onLoadStart={() => setStatus("loading")}
+            onLoadedMetadata={() => setStatus("ready")}
             onPlay={() => setPlaying(true)}
             onPause={() => setPlaying(false)}
             onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)}
             onDurationChange={(event) => setDuration(event.currentTarget.duration)}
             onVolumeChange={(event) => { setMuted(event.currentTarget.muted); setVolume(event.currentTarget.volume); }}
-            onError={() => { setStream(undefined); setStatus("error"); setMessage("Berkas video tidak dapat diputar. Coba server lain."); }}
+            onError={() => { setFailed(true); setStatus("error"); setMessage("Berkas video tidak dapat diputar. Coba server lain."); }}
           />
         ) : (
           <div className="grid h-full place-items-center px-6 text-center">
@@ -134,17 +118,23 @@ export function StreamPlayer({ servers, slug, title }: Props) {
           </div>
         )}
 
-        {stream && (
+        {streamURL && !failed && status === "loading" && (
+          <div className="pointer-events-none absolute inset-0 grid place-items-center bg-black/45" aria-live="polite">
+            <p className="font-display text-2xl">Menyiapkan video…</p>
+          </div>
+        )}
+
+        {streamURL && !failed && (
           <div className="absolute inset-x-0 bottom-0 bg-black/85 p-3 md:p-4">
             <label className="sr-only" htmlFor="video-progress">Posisi video</label>
             <input id="video-progress" type="range" min={0} max={duration || 0} step="0.1" value={Math.min(currentTime, duration || 0)} onChange={(event) => { if (videoRef.current) videoRef.current.currentTime = Number(event.target.value); }} className="w-full accent-[var(--accent)]" />
-            <div className="mt-2 flex items-center gap-3 text-sm font-semibold">
+            <div className="mt-2 flex flex-wrap items-center gap-3 text-sm font-semibold">
               <button type="button" onClick={() => void togglePlayback()} className="min-h-11 min-w-11 border border-white/40 px-3" aria-label={playing ? "Jeda" : "Putar"}>{playing ? "Jeda" : "Putar"}</button>
-              <span className="tabular-nums">{formatTime(currentTime)} / {formatTime(duration)}</span>
-              <button type="button" onClick={() => { const video = videoRef.current; if (video) { video.muted = !video.muted; setMuted(video.muted); } }} className="ml-auto min-h-11 px-2" aria-label={muted ? "Aktifkan suara" : "Bisukan"}>{muted ? "Suara" : "Bisukan"}</button>
+              <span className="mr-auto tabular-nums">{formatTime(currentTime)} / {formatTime(duration)}</span>
+              <button type="button" onClick={() => { const video = videoRef.current; if (video) { video.muted = !video.muted; setMuted(video.muted); } }} className="min-h-11 px-2" aria-label={muted ? "Aktifkan suara" : "Bisukan"}>{muted ? "Suara" : "Bisukan"}</button>
               <label className="sr-only" htmlFor="video-volume">Volume</label>
               <input id="video-volume" type="range" min={0} max={1} step={0.05} value={muted ? 0 : volume} onChange={(event) => { const value = Number(event.target.value); if (videoRef.current) { videoRef.current.volume = value; videoRef.current.muted = value === 0; } }} className="hidden w-24 accent-[var(--accent)] sm:block" />
-              <button type="button" onClick={() => void toggleFullscreen()} className="min-h-11 border border-white/40 px-3">Layar penuh</button>
+              <button type="button" onClick={() => void toggleFullscreen()} className="min-h-11 border border-white/40 px-3"><span className="sm:hidden">Penuh</span><span className="hidden sm:inline">Layar penuh</span></button>
             </div>
           </div>
         )}

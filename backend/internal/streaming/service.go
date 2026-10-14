@@ -30,12 +30,12 @@ func New(source Source, cache Cache, ttl time.Duration) *Service {
 	return &Service{source: source, cache: cache, ttl: ttl}
 }
 
-func (s *Service) ResolveStream(ctx context.Context, slug, serverID string) (scraper.MediaStream, error) {
+func (s *Service) ResolveStream(ctx context.Context, slug, serverID string, refresh bool) (scraper.MediaStream, error) {
 	if s == nil || s.source == nil {
 		return scraper.MediaStream{}, fmt.Errorf("stream resolver is not configured")
 	}
 	key := "stream:" + url.QueryEscape(slug) + ":" + url.QueryEscape(serverID)
-	if s.cache != nil {
+	if s.cache != nil && !refresh {
 		if payload, found, err := s.cache.Get(ctx, key, false); err != nil {
 			log.Printf("stream cache read failed for %s: %v", key, err)
 		} else if found {

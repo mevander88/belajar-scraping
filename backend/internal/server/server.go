@@ -33,7 +33,7 @@ type ScrapingService interface {
 }
 
 type StreamResolver interface {
-	ResolveStream(context.Context, string, string) (scraper.MediaStream, error)
+	ResolveStream(context.Context, string, string, bool) (scraper.MediaStream, error)
 }
 
 type Dependencies struct {
@@ -122,7 +122,7 @@ func streamHandler(resolver StreamResolver) fiber.Handler {
 		if resolver == nil {
 			return fiber.NewError(fiber.StatusServiceUnavailable, "layanan video belum tersedia")
 		}
-		stream, err := resolver.ResolveStream(c.Context(), c.Params("slug"), c.Params("server"))
+		stream, err := resolver.ResolveStream(c.Context(), c.Params("slug"), c.Params("server"), c.Query("refresh") == "true")
 		if err != nil {
 			log.Printf("stream resolution failed slug=%q server=%q category=%s: %v", c.Params("slug"), c.Params("server"), scrapingErrorCategory(err), err)
 			switch {
