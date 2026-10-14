@@ -18,12 +18,13 @@ type fakeScrapingService struct {
 type fakeStreamResolver struct {
 	slug     string
 	serverID string
+	refresh  bool
 	stream   scraper.MediaStream
 	err      error
 }
 
-func (f *fakeStreamResolver) ResolveStream(_ context.Context, slug, serverID string) (scraper.MediaStream, error) {
-	f.slug, f.serverID = slug, serverID
+func (f *fakeStreamResolver) ResolveStream(_ context.Context, slug, serverID string, refresh bool) (scraper.MediaStream, error) {
+	f.slug, f.serverID, f.refresh = slug, serverID, refresh
 	return f.stream, f.err
 }
 
@@ -220,6 +221,19 @@ func TestStreamEndpointRejectsUnsupportedProvider(t *testing.T) {
 	defer response.Body.Close()
 	if response.StatusCode != http.StatusUnprocessableEntity {
 		t.Fatalf("expected status %d, got %d", http.StatusUnprocessableEntity, response.StatusCode)
+	}
+}
+
+func TestStreamEndpointCanRefreshExpiredResolution(t *testing.T) {
+	resolver := &fakeStreamResolver{stream: scraper.MediaStream{ServerID: "480p-0", URL: "https://cdn.odcloud.net/anime/example.mp4", Kind: "file", ContentType: "video/mp4"}}
+	app := NewWithDependencies(Dependencies{Streams: resolver})
+	response, err := app.Test(newRequest("/api/v1/source/episodes/example-1/streams/480p-0?refresh=true"))
+	if err != nil {
+		t.Fatalf("request refreshed stream endpoint: %v", err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK || !resolver.refresh {
+		t.Fatalf("expected forced refresh, status=%d refresh=%v", response.StatusCode, resolver.refresh)
 	}
 }
 
