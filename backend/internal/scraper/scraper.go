@@ -2,10 +2,13 @@ package scraper
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/cookiejar"
 	"net/url"
 	"path"
 	"regexp"
@@ -53,6 +56,9 @@ func NewWithConfig(baseURL string, client *http.Client, delay time.Duration) (*S
 		client = &http.Client{Timeout: 20 * time.Second}
 	}
 	clientCopy := *client
+	if clientCopy.Jar == nil {
+		clientCopy.Jar, _ = cookiejar.New(nil)
+	}
 	originalRedirectPolicy := client.CheckRedirect
 	clientCopy.CheckRedirect = func(request *http.Request, via []*http.Request) error {
 		if !strings.EqualFold(request.URL.Scheme, parsedBaseURL.Scheme) || !strings.EqualFold(request.URL.Host, parsedBaseURL.Host) {
@@ -489,11 +495,20 @@ func parseAnimeDetail(doc *goquery.Document, sourceURL string) AnimeDetail {
 }
 
 func parseEpisodeDetail(doc *goquery.Document, sourceURL string) EpisodeDetail {
-	detail := EpisodeDetail{Slug: slugFromURL(sourceURL), URL: sourceURL, Title: cleanText(doc.Find("h1.posttl").Text()), Streams: []Stream{}, Episodes: []EpisodeSummary{}, Downloads: []DownloadGroup{}}
+	detail := EpisodeDetail{Slug: slugFromURL(sourceURL), URL: sourceURL, Title: cleanText(doc.Find("h1.posttl").Text()), Servers: []StreamServer{}, Episodes: []EpisodeSummary{}, Downloads: []DownloadGroup{}}
 	detail.PosterURL, _ = doc.Find("img.attachment-post-thumbnail").First().Attr("src")
-	doc.Find(".responsive-embed-stream iframe").Each(func(_ int, frame *goquery.Selection) {
-		href, _ := frame.Attr("src")
-		detail.Streams = append(detail.Streams, Stream{Provider: hostFromURL(href), URL: href})
+	doc.Find(".mirrorstream a[data-content]").Each(func(_ int, link *goquery.Selection) {
+		encoded, _ := link.Attr("data-content")
+		payload, err := decodeMirrorPayload(encoded)
+		if err != nil || payload.Quality == "" || payload.Index < 0 {
+			return
+		}
+		provider := strings.ToLower(cleanText(link.Text()))
+		_, isDefault := link.Attr("data-default")
+		detail.Servers = append(detail.Servers, StreamServer{
+			ID: payload.Quality + "-" + strconv.Itoa(payload.Index), Provider: provider,
+			Quality: payload.Quality, Default: isDefault, Supported: supportedStreamProvider(provider),
+		})
 	})
 	doc.Find("#selectcog option").Each(func(_ int, option *goquery.Selection) {
 		href, _ := option.Attr("value")
@@ -513,6 +528,33 @@ func parseEpisodeDetail(doc *goquery.Document, sourceURL string) EpisodeDetail {
 		}
 	})
 	return detail
+}
+
+type mirrorPayload struct {
+	PostID  int    `json:"id"`
+	Index   int    `json:"i"`
+	Quality string `json:"q"`
+}
+
+func decodeMirrorPayload(encoded string) (mirrorPayload, error) {
+	decoded, err := base64.StdEncoding.DecodeString(strings.TrimSpace(encoded))
+	if err != nil {
+		return mirrorPayload{}, err
+	}
+	var payload mirrorPayload
+	if err := json.Unmarshal(decoded, &payload); err != nil {
+		return mirrorPayload{}, err
+	}
+	return payload, nil
+}
+
+func supportedStreamProvider(provider string) bool {
+	switch strings.ToLower(strings.TrimSpace(provider)) {
+	case "odcdn", "odstream":
+		return true
+	default:
+		return false
+	}
 }
 
 func slugFromURL(raw string) string {

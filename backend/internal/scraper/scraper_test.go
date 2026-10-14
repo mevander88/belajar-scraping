@@ -176,6 +176,10 @@ func TestParseEpisodeDetail(t *testing.T) {
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(`
 		<h1 class="posttl">Example Episode 1</h1>
 		<div class="responsive-embed-stream"><iframe src="https://stream.example.test/embed/1"></iframe></div>
+		<div class="mirrorstream">
+			<a data-content="eyJpZCI6MTIzLCJpIjowLCJxIjoiNDgwcCJ9" data-default="true">odcdn</a>
+			<a data-content="eyJpZCI6MTIzLCJpIjoxLCJxIjoiNDgwcCJ9">mega</a>
+		</div>
 		<select id="selectcog"><option value="0">Select</option><option value="https://otakudesu.blog/episode/example-1/">Episode 1</option></select>
 		<div class="download"><ul><li><strong>Mp4 720p</strong><a href="https://download.example.test/1">Provider</a><i>100 MB</i></li></ul></div>`))
 	if err != nil {
@@ -183,11 +187,33 @@ func TestParseEpisodeDetail(t *testing.T) {
 	}
 
 	detail := parseEpisodeDetail(doc, "https://otakudesu.blog/episode/example-1/")
-	if len(detail.Streams) != 1 || detail.Streams[0].Provider != "stream.example.test" {
-		t.Fatalf("unexpected streams: %#v", detail.Streams)
+	if len(detail.Servers) != 2 || detail.Servers[0].ID != "480p-0" || !detail.Servers[0].Supported || detail.Servers[1].Supported {
+		t.Fatalf("unexpected servers: %#v", detail.Servers)
 	}
 	if len(detail.Downloads) != 1 || detail.Downloads[0].Label != "Mp4 720p" {
 		t.Fatalf("unexpected downloads: %#v", detail.Downloads)
+	}
+}
+
+func TestFindStreamSelectionRejectsUnknownServer(t *testing.T) {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(`<div class="mirrorstream"><a data-content="eyJpZCI6MTIzLCJpIjowLCJxIjoiNDgwcCJ9">odcdn</a></div>`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := findStreamSelection(doc, "720p-9"); !errors.Is(err, ErrInvalidRequest) {
+		t.Fatalf("expected invalid request, got %v", err)
+	}
+}
+
+func TestDirectMediaAllowlistRejectsEmbedAndUnknownHosts(t *testing.T) {
+	if allowedMediaURL("https://desustream.net/embed/player") {
+		t.Fatal("expected HTML embed URL to be rejected")
+	}
+	if allowedMediaURL("https://example.test/video.mp4") {
+		t.Fatal("expected unknown media host to be rejected")
+	}
+	if !allowedMediaURL("https://cdn.odcloud.net/anime/example.mp4") {
+		t.Fatal("expected known direct media host to be accepted")
 	}
 }
 

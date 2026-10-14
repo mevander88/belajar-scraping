@@ -28,10 +28,16 @@ export type AnimeDetail = {
   duration?: string; release_date?: string; release_date_raw?: string; studio?: string;
   genres: Genre[]; synopsis?: string; episodes: EpisodeSummary[]; batches: EpisodeSummary[];
 };
-export type Stream = { provider?: string; url: string };
+export type StreamServer = {
+  id: string; provider: string; quality: string; default?: boolean; supported: boolean;
+};
+export type MediaStream = {
+  server_id: string; provider: string; quality: string; url: string;
+  kind: "file" | "hls" | "dash"; content_type: string;
+};
 export type DownloadLink = { provider: string; url: string };
 export type DownloadGroup = { label: string; size?: string; links: DownloadLink[] };
 export type EpisodeDetail = {
   slug: string; url: string; title: string; poster_url?: string;
-  streams: Stream[]; episode_options: EpisodeSummary[]; downloads: DownloadGroup[];
+  servers: StreamServer[]; episode_options: EpisodeSummary[]; downloads: DownloadGroup[];
 };

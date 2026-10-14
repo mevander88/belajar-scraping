@@ -122,10 +122,14 @@ func (s *Service) ttl(kind scraper.ContentKind, response scraper.Response) time.
 
 func cacheKey(request scraper.Request) string {
 	identity := request.Slug
+	version := ""
+	if request.Kind == scraper.KindEpisode {
+		version = ":v2"
+	}
 	if request.Kind == scraper.KindSearch {
 		identity = scraper.NormalizeSearchQuery(request.Query)
 	}
-	return "source:" + string(request.Kind) + ":" + url.QueryEscape(identity) + ":page:" + strconv.Itoa(request.Page)
+	return "source:" + string(request.Kind) + version + ":" + url.QueryEscape(identity) + ":page:" + strconv.Itoa(request.Page)
 }
 
 func decodeResponse(payload []byte) (scraper.Response, error) {
