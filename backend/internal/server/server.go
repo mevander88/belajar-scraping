@@ -45,7 +45,8 @@ func New(db *gorm.DB, allowedOrigins []string) *fiber.App {
 
 func NewWithDependencies(dependencies Dependencies) *fiber.App {
 	app := fiber.New(fiber.Config{
-		AppName: "Belajar Scraping API",
+		AppName:      "Belajar Scraping API",
+		UnescapePath: true,
 		ErrorHandler: func(c fiber.Ctx, err error) error {
 			code := fiber.StatusInternalServerError
 			message := "internal server error"
