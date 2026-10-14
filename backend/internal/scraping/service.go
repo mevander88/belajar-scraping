@@ -3,12 +3,14 @@ package scraping
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/url"
 	"strconv"
 	"time"
 
+	"github.com/mevander88/belajar-scraping/backend/internal/coalesce"
 	"github.com/mevander88/belajar-scraping/backend/internal/scraper"
 )
 
@@ -30,9 +32,10 @@ type Policy struct {
 }
 
 type Service struct {
-	source Source
-	cache  Cache
-	policy Policy
+	source  Source
+	cache   Cache
+	policy  Policy
+	flights coalesce.Group[string, scraper.Response]
 }
 
 func New(source Source, cache Cache, policy Policy) *Service {
@@ -70,9 +73,11 @@ func (s *Service) Get(ctx context.Context, request scraper.Request) (scraper.Res
 		}
 	}
 
-	response, sourceErr := s.source.Run(ctx, request)
+	response, sourceErr := s.flights.Do(ctx, key, func() (scraper.Response, error) {
+		return s.source.Run(ctx, request)
+	})
 	if sourceErr != nil {
-		if s.cache != nil {
+		if s.cache != nil && canUseStale(sourceErr) {
 			payload, found, cacheErr := s.cache.Get(ctx, key, true)
 			if cacheErr != nil {
 				log.Printf("scraping stale cache read failed for %s: %v", key, cacheErr)
@@ -106,6 +111,12 @@ func (s *Service) Get(ctx context.Context, request scraper.Request) (scraper.Res
 		response.Meta.Warnings = append(response.Meta.Warnings, "hasil berhasil diambil tetapi gagal disimpan ke Redis")
 	}
 	return response, nil
+}
+
+func canUseStale(err error) bool {
+	return errors.Is(err, scraper.ErrUpstream) ||
+		errors.Is(err, scraper.ErrInvalidContent) ||
+		errors.Is(err, context.DeadlineExceeded)
 }
 
 func (s *Service) ttl(kind scraper.ContentKind, response scraper.Response) time.Duration {

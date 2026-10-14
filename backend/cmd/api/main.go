@@ -4,6 +4,8 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/mevander88/belajar-scraping/backend/internal/cache"
@@ -24,9 +26,19 @@ func main() {
 	} else {
 		log.Println("database connection established")
 		if err := database.Migrate(db); err != nil {
-			log.Fatalf("database migration failed: %v", err)
+			log.Printf("database migration failed: %v", err)
+			if closeErr := database.Close(db); closeErr != nil {
+				log.Printf("close unusable database connection: %v", closeErr)
+			}
+			db = nil
+		} else {
+			log.Println("database migration completed")
+			defer func() {
+				if err := database.Close(db); err != nil {
+					log.Printf("close database: %v", err)
+				}
+			}()
 		}
-		log.Println("database migration completed")
 	}
 
 	cacheContext, cancelCacheConnect := context.WithTimeout(context.Background(), 3*time.Second)
@@ -52,7 +64,8 @@ func main() {
 		cfg.ScraperDelay,
 	)
 	if err != nil {
-		log.Fatalf("configure scraping source: %v", err)
+		log.Printf("configure scraping source: %v", err)
+		return
 	}
 	scrapingService := scraping.New(source, scrapingCache, scraping.Policy{
 		TTL: map[scraper.ContentKind]time.Duration{
@@ -70,7 +83,7 @@ func main() {
 		CompleteAnimeTTL: cfg.CacheTTLAnimeComplete,
 		StaleTTL:         cfg.CacheStaleTTL,
 	})
-	streamingService := streaming.New(source, scrapingCache, cfg.CacheTTLStream)
+	streamingService := streaming.New(source, scrapingCache, cfg.CacheTTLStream, cfg.StreamResolveTimeout)
 
 	app := server.NewWithDependencies(server.Dependencies{
 		Database: db, Cache: cacheHealth, Scraping: scrapingService, Streams: streamingService, AllowedOrigins: cfg.AllowedOrigins,
@@ -78,7 +91,31 @@ func main() {
 	address := ":" + cfg.Port
 	log.Printf("API listening on http://localhost%s", address)
 
-	if err := app.Listen(address); err != nil {
-		log.Fatalf("API stopped: %v", err)
+	listenErrors := make(chan error, 1)
+	go func() {
+		listenErrors <- app.Listen(address)
+	}()
+
+	shutdownSignal, stopSignals := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stopSignals()
+	select {
+	case err := <-listenErrors:
+		if err != nil {
+			log.Printf("API stopped: %v", err)
+		}
+	case <-shutdownSignal.Done():
+		shutdownContext, cancelShutdown := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancelShutdown()
+		if err := app.ShutdownWithContext(shutdownContext); err != nil {
+			log.Printf("graceful shutdown failed: %v", err)
+		}
+		select {
+		case err := <-listenErrors:
+			if err != nil {
+				log.Printf("API stopped: %v", err)
+			}
+		case <-shutdownContext.Done():
+			log.Printf("API shutdown wait exceeded deadline: %v", shutdownContext.Err())
+		}
 	}
 }

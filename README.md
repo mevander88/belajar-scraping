@@ -43,7 +43,7 @@ compose.yaml
    npm run dev
    ```
 
-5. Buka `http://localhost:3000`. Halaman awal menampilkan status API dan koneksi database.
+5. Buka `http://localhost:3000` untuk melihat katalog dari backend scraping.
 
 ## Endpoint awal
 
@@ -57,17 +57,21 @@ compose.yaml
 - `GET /api/v1/source/schedule`
 - `GET /api/v1/source/genres`
 - `GET /api/v1/source/genres/{slug}?page=1`
+- `GET /api/v1/source/search?query={judul}`
 - `GET /api/v1/source/anime?status=ongoing&page=1`
 - `GET /api/v1/source/anime/{slug}`
 - `GET /api/v1/source/episodes/{slug}`
+- `GET /api/v1/source/episodes/{slug}/streams/{server}`
 
 Respons memiliki metadata sumber, waktu pengambilan, jumlah data, dan kondisi cache: `hit`, `miss`, `stale`, atau `bypass`. Jika website sumber gagal diakses, backend memakai salinan cache lama ketika tersedia. Jika Redis tidak tersedia, backend tetap mengambil data langsung dari sumber.
+
+PostgreSQL dan Redis saat ini diperlakukan sebagai dependency opsional untuk traffic scraping. Endpoint readiness mengembalikan status `degraded` ketika salah satunya tidak tersedia, tetapi tetap merespons HTTP 200 karena aplikasi masih dapat melayani request. Kontrak respons lengkap tersedia di [docs/api-contract.md](docs/api-contract.md).
 
 Koneksi sumber, batas waktu, jeda permintaan, dan masa berlaku cache per kategori dapat diatur melalui variabel pada `backend/.env.example`.
 
 ## Migrasi schema
 
-Migrasi berbasis GORM berjalan otomatis ketika backend berhasil terhubung ke PostgreSQL. Migrasi saat ini membuat tabel `data_anime`, termasuk constraint status dan index untuk soft delete.
+Migrasi berbasis GORM berjalan otomatis ketika backend berhasil terhubung ke PostgreSQL. Migrasi saat ini membuat tabel `data_anime`, termasuk constraint status dan index untuk soft delete. Tabel tersebut masih menjadi fondasi schema dan belum dipakai oleh endpoint produksi.
 
 Untuk menjalankan migrasi secara lokal, cukup mulai backend:
 

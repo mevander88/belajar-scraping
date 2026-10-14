@@ -23,8 +23,12 @@ import (
 )
 
 const (
-	defaultBaseURL = "https://otakudesu.blog"
-	maxBodyBytes   = 5 << 20
+	defaultBaseURL      = "https://otakudesu.blog"
+	maxBodyBytes        = 5 << 20
+	MaxPage             = 1000
+	MaxSlugRunes        = 200
+	MaxSearchQueryRunes = 100
+	MaxServerIDRunes    = 100
 )
 
 var (
@@ -579,7 +583,7 @@ func cleanText(value string) string {
 var numericPattern = regexp.MustCompile(`^[0-9]+(?:\.[0-9]+)?$`)
 
 func validSlug(slug string) bool {
-	if slug == "" || slug == "." || slug == ".." || !utf8.ValidString(slug) {
+	if slug == "" || slug == "." || slug == ".." || !utf8.ValidString(slug) || utf8.RuneCountInString(slug) > MaxSlugRunes {
 		return false
 	}
 
@@ -613,14 +617,22 @@ func ValidateRequest(request Request) error {
 			return fmt.Errorf("%w: a valid slug is required for %s", ErrInvalidRequest, request.Kind)
 		}
 	case KindSearch:
-		if request.Slug != "" || NormalizeSearchQuery(request.Query) == "" || request.Page != 1 {
+		query := NormalizeSearchQuery(request.Query)
+		if request.Slug != "" || query == "" || utf8.RuneCountInString(query) > MaxSearchQueryRunes || request.Page != 1 {
 			return fmt.Errorf("%w: a query and no pagination are required for search", ErrInvalidRequest)
 		}
 	default:
 		return fmt.Errorf("%w: unsupported kind %q", ErrInvalidRequest, request.Kind)
 	}
-	if request.Page < 1 {
+	if request.Page < 1 || request.Page > MaxPage {
 		return fmt.Errorf("%w: page must be greater than zero", ErrInvalidRequest)
+	}
+	return nil
+}
+
+func ValidateStreamRequest(slug, serverID string) error {
+	if !validSlug(slug) || serverID == "" || !utf8.ValidString(serverID) || utf8.RuneCountInString(serverID) > MaxServerIDRunes {
+		return fmt.Errorf("%w: invalid stream identifier", ErrInvalidRequest)
 	}
 	return nil
 }

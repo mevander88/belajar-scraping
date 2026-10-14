@@ -48,7 +48,9 @@ func (s *Store) Set(ctx context.Context, key string, value []byte, freshTTL, sta
 	}
 	pipe := s.client.TxPipeline()
 	pipe.Set(ctx, s.key(key, false), value, freshTTL)
-	pipe.Set(ctx, s.key(key, true), value, freshTTL+staleTTL)
+	if staleTTL > 0 {
+		pipe.Set(ctx, s.key(key, true), value, freshTTL+staleTTL)
+	}
 	if _, err := pipe.Exec(ctx); err != nil {
 		return fmt.Errorf("write Redis cache: %w", err)
 	}

@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"html"
 	"io"
-	"mime"
 	"net/http"
 	"net/url"
+	"path"
 	"regexp"
 	"strconv"
 	"strings"
@@ -66,7 +66,7 @@ func (s *Scraper) ResolveStream(ctx context.Context, slug, serverID string) (Med
 	if err != nil {
 		return MediaStream{}, err
 	}
-	contentType, kind, err := validateDirectMedia(ctx, directURL)
+	contentType, kind, err := classifyDirectMedia(directURL)
 	if err != nil {
 		return MediaStream{}, err
 	}
@@ -209,31 +209,18 @@ func allowedMediaURL(rawURL string) bool {
 	return host == "cdn.odcloud.net" || host == "archive.org" || strings.HasSuffix(host, ".archive.org")
 }
 
-func validateDirectMedia(ctx context.Context, rawURL string) (string, string, error) {
-	client := restrictedClient(allowedMediaURL)
-	req, err := http.NewRequestWithContext(ctx, http.MethodHead, rawURL, nil)
-	if err != nil {
-		return "", "", fmt.Errorf("build media request: %w", err)
+func classifyDirectMedia(rawURL string) (string, string, error) {
+	parsed, err := url.Parse(rawURL)
+	if err != nil || !allowedMediaURL(rawURL) {
+		return "", "", fmt.Errorf("%w: media URL is not allowed", ErrStreamUnsupported)
 	}
-	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; BelajarScraping/1.0)")
-	response, err := client.Do(req)
-	if err != nil {
-		return "", "", fmt.Errorf("%w: validate media: %v", ErrStreamUnavailable, err)
-	}
-	defer response.Body.Close()
-	if response.StatusCode < 200 || response.StatusCode >= 400 {
-		return "", "", fmt.Errorf("%w: media returned HTTP %d", ErrStreamUnavailable, response.StatusCode)
-	}
-	contentType, _, _ := mime.ParseMediaType(response.Header.Get("Content-Type"))
-	switch strings.ToLower(contentType) {
-	case "video/mp4", "video/webm":
-		return contentType, "file", nil
-	case "application/vnd.apple.mpegurl", "application/x-mpegurl":
-		return contentType, "hls", nil
-	case "application/dash+xml":
-		return contentType, "dash", nil
+	switch strings.ToLower(path.Ext(parsed.Path)) {
+	case ".mp4":
+		return "video/mp4", "file", nil
+	case ".webm":
+		return "video/webm", "file", nil
 	default:
-		return "", "", fmt.Errorf("%w: media content type is not supported", ErrStreamUnsupported)
+		return "", "", fmt.Errorf("%w: media format is not supported", ErrStreamUnsupported)
 	}
 }
 

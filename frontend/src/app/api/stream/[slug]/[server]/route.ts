@@ -1,14 +1,11 @@
 import { ApiError, getStream } from "@/lib/api";
+import { MAX_REDIRECTS, isAllowedMediaType, isAllowedMediaURL, isValidRange } from "@/lib/media-policy.mjs";
 import type { MediaStream } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const OPEN_TIMEOUT_MS = 20_000;
-const MAX_REDIRECTS = 3;
-const RANGE_PATTERN = /^bytes=(?:\d+-\d*|-\d+)$/;
-const ALLOWED_MEDIA_TYPES = new Set(["video/mp4", "video/webm"]);
-
 type Params = { params: Promise<{ slug: string; server: string }> };
 
 function errorResponse(message: string, status: number) {
@@ -18,19 +15,8 @@ function errorResponse(message: string, status: number) {
   });
 }
 
-function isAllowedMediaURL(rawURL: string) {
-  try {
-    const parsed = new URL(rawURL);
-    if (parsed.protocol !== "https:" || parsed.username || parsed.password) return false;
-    const host = parsed.hostname.toLowerCase();
-    return host === "cdn.odcloud.net" || host === "archive.org" || host.endsWith(".archive.org");
-  } catch {
-    return false;
-  }
-}
-
 function validateResolvedStream(stream: MediaStream) {
-  return stream.kind === "file" && ALLOWED_MEDIA_TYPES.has(stream.content_type.toLowerCase()) && isAllowedMediaURL(stream.url);
+  return stream.kind === "file" && isAllowedMediaType(stream.content_type) && isAllowedMediaURL(stream.url);
 }
 
 async function fetchAllowedMedia(rawURL: string, method: "GET" | "HEAD", range: string | null, signal: AbortSignal) {
@@ -47,6 +33,28 @@ async function fetchAllowedMedia(rawURL: string, method: "GET" | "HEAD", range: 
     target = new URL(location, target).toString();
   }
   throw new Error("Redirect sumber video terlalu banyak.");
+}
+
+async function openMedia(rawURL: string, method: "GET" | "HEAD", range: string | null, requestSignal: AbortSignal) {
+  const controller = new AbortController();
+  const abortUpstream = () => controller.abort(requestSignal.reason);
+  if (requestSignal.aborted) abortUpstream();
+  else requestSignal.addEventListener("abort", abortUpstream, { once: true });
+  const timeout = setTimeout(
+    () => controller.abort(new DOMException("Sumber video melewati batas waktu.", "TimeoutError")),
+    OPEN_TIMEOUT_MS,
+  );
+
+  try {
+    const response = await fetchAllowedMedia(rawURL, method, range, controller.signal);
+    return { response, controller };
+  } catch (error) {
+    controller.abort(error);
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+    requestSignal.removeEventListener("abort", abortUpstream);
+  }
 }
 
 function responseHeaders(upstream: Response) {
@@ -93,52 +101,46 @@ function streamingBody(body: ReadableStream<Uint8Array>, upstreamController: Abo
 async function proxyMedia(request: Request, context: Params, method: "GET" | "HEAD") {
   const { slug, server } = await context.params;
   const range = request.headers.get("range");
-  if (range && !RANGE_PATTERN.test(range)) return errorResponse("Rentang video tidak valid.", 400);
-
-  const upstreamController = new AbortController();
-  const abortUpstream = () => upstreamController.abort(request.signal.reason);
-  if (request.signal.aborted) abortUpstream();
-  else request.signal.addEventListener("abort", abortUpstream, { once: true });
-  const timeout = setTimeout(() => upstreamController.abort(new DOMException("Sumber video melewati batas waktu.", "TimeoutError")), OPEN_TIMEOUT_MS);
+  if (!isValidRange(range)) return errorResponse("Rentang video tidak valid.", 400);
 
   try {
     let stream = await getStream(slug, server, false, request.signal);
     if (!validateResolvedStream(stream)) return errorResponse("Format video belum didukung.", 422);
 
-    let upstream = await fetchAllowedMedia(stream.url, method, range, upstreamController.signal);
+    let opened = await openMedia(stream.url, method, range, request.signal);
+    let upstream = opened.response;
     if ([401, 403, 404, 410].includes(upstream.status)) {
       await upstream.body?.cancel();
       stream = await getStream(slug, server, true, request.signal);
       if (!validateResolvedStream(stream)) return errorResponse("Format video belum didukung.", 422);
-      upstream = await fetchAllowedMedia(stream.url, method, range, upstreamController.signal);
+      opened = await openMedia(stream.url, method, range, request.signal);
+      upstream = opened.response;
     }
-    clearTimeout(timeout);
 
     const headers = responseHeaders(upstream);
-    if (upstream.status === 416) return new Response(null, { status: 416, headers });
+    if (upstream.status === 416) {
+      await upstream.body?.cancel();
+      return new Response(null, { status: 416, headers });
+    }
     if (upstream.status !== 200 && upstream.status !== 206) {
       await upstream.body?.cancel();
       return errorResponse("Sumber video tidak dapat diakses.", 502);
     }
 
     const contentType = (upstream.headers.get("content-type") ?? "").split(";", 1)[0].trim().toLowerCase();
-    if (!ALLOWED_MEDIA_TYPES.has(contentType)) {
+    if (!isAllowedMediaType(contentType)) {
       await upstream.body?.cancel();
       return errorResponse("Respons sumber bukan file video yang didukung.", 502);
     }
     if (method === "HEAD" || !upstream.body) return new Response(null, { status: upstream.status, headers });
-    return new Response(streamingBody(upstream.body, upstreamController, request.signal), { status: upstream.status, headers });
+    return new Response(streamingBody(upstream.body, opened.controller, request.signal), { status: upstream.status, headers });
   } catch (error) {
-    clearTimeout(timeout);
     if (error instanceof ApiError) {
       const status = [400, 404, 422].includes(error.status) ? error.status : 502;
       return errorResponse(error.message, status);
     }
     if (error instanceof DOMException && error.name === "TimeoutError") return errorResponse("Sumber video melewati batas waktu.", 504);
     return errorResponse("Video belum dapat dimuat.", 502);
-  } finally {
-    clearTimeout(timeout);
-    request.signal.removeEventListener("abort", abortUpstream);
   }
 }
 
