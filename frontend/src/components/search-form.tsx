@@ -24,8 +24,8 @@ export function SearchForm({ defaultValue = "", compact = false, overlay = false
 
   if (compact) {
     const overlayControl = overlay
-      ? "text-white/65 hover:text-white"
-      : "text-primary hover:text-focus";
+      ? "text-white/80 hover:text-white"
+      : "text-secondary hover:text-foreground";
 
     return (
       <>
@@ -39,9 +39,9 @@ export function SearchForm({ defaultValue = "", compact = false, overlay = false
             required
             autoComplete="off"
             placeholder="Cari anime…"
-            className="min-h-11 min-w-0 flex-1 rounded-lg border border-border bg-canvas px-3 pr-12 text-sm text-foreground outline-none transition-colors placeholder:text-muted focus:border-focus"
+            className="min-h-11 min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 pr-12 text-sm text-foreground outline-none transition-colors placeholder:text-muted focus:border-focus"
           />
-          <button type="submit" aria-label="Cari anime" className="absolute right-1 top-1 grid size-9 cursor-pointer place-items-center rounded-md text-primary transition-colors hover:text-focus focus-visible:outline-offset-1">
+          <button type="submit" aria-label="Cari anime" className="absolute right-1 top-1 grid size-9 cursor-pointer place-items-center rounded-md text-secondary transition-colors hover:text-foreground focus-visible:outline-offset-1">
             <Icon name="search" className="size-4.5" />
           </button>
         </form>
@@ -66,9 +66,9 @@ export function SearchForm({ defaultValue = "", compact = false, overlay = false
                 required
                 autoComplete="off"
                 placeholder="Cari anime…"
-                className={`min-h-11 min-w-0 flex-1 rounded-lg border px-3 pr-12 text-sm outline-none transition-colors focus:border-focus ${overlay ? "border-white/20 bg-black/20 text-white/85 placeholder:text-white/45" : "border-border bg-canvas text-foreground placeholder:text-muted"}`}
+                className={`min-h-11 min-w-0 flex-1 rounded-lg border px-3 pr-12 text-sm outline-none transition-colors focus:border-focus ${overlay ? "border-white/25 bg-black/30 text-white placeholder:text-white/65" : "border-border bg-elevated text-foreground placeholder:text-muted"}`}
               />
-              <button type="submit" aria-label="Cari anime" className={`absolute right-1 top-1 grid size-9 cursor-pointer place-items-center rounded-md transition-colors focus-visible:outline-offset-1 ${overlay ? "text-white/65 hover:text-white" : "text-primary hover:text-focus"}`}>
+              <button type="submit" aria-label="Cari anime" className={`absolute right-1 top-1 grid size-9 cursor-pointer place-items-center rounded-md transition-colors focus-visible:outline-offset-1 ${overlay ? "text-white/80 hover:text-white" : "text-secondary hover:text-foreground"}`}>
                 <Icon name="search" className="size-4.5" />
               </button>
             </>
@@ -101,9 +101,9 @@ export function SearchForm({ defaultValue = "", compact = false, overlay = false
         required
         autoComplete="off"
         placeholder="Cari judul anime"
-        className="min-h-11 min-w-0 flex-1 rounded-l-lg border border-r-0 border-border bg-canvas px-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted focus:border-focus sm:px-4"
+        className="min-h-11 min-w-0 flex-1 rounded-l-lg border border-r-0 border-border bg-surface px-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted focus:border-focus sm:px-4"
       />
-      <button type="submit" className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-r-lg border border-primary bg-primary px-4 text-sm font-bold text-foreground transition-colors hover:border-primary-hover hover:bg-primary-hover sm:px-6">
+      <button type="submit" className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-r-lg border border-primary bg-primary px-4 text-sm font-bold text-white transition-colors hover:border-primary-hover hover:bg-primary-hover sm:px-6">
         <Icon name="search" className="size-4" />Cari
       </button>
     </form>

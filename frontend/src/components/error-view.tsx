@@ -33,7 +33,7 @@ export function ErrorView({ reset, pathname }: { reset: () => void; pathname: st
   const copy = errorCopy(pathname);
   return (
     <section className="shell py-16 md:py-20" role="alert">
-      <div className="max-w-2xl rounded-xl border border-error/40 bg-surface p-6 md:p-8">
+      <div className="max-w-2xl rounded-lg border border-error/40 bg-surface p-6 md:p-8">
         <Icon name="alert-circle" className="mb-4 size-8 text-error" />
         <p className="kicker text-error">Gangguan sementara</p>
         <h1 className="page-title mt-2">{copy.title}</h1>
