@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/empty-state";
 import { StreamPlayer } from "@/components/stream-player";
 import { Icon } from "@/components/icon";
 import { ApiError, getEpisode } from "@/lib/api";
+import { adjacentEpisodes } from "@/lib/episode-navigation";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -24,6 +25,7 @@ export default async function EpisodePage({ params }: Props) {
   const { slug } = await params;
   const response = await loadEpisode(slug);
   const episode = response.data;
+  const { previous, next } = adjacentEpisodes(episode.episode_options, slug);
 
   return (
     <div className="shell py-8 md:py-10">
@@ -33,6 +35,11 @@ export default async function EpisodePage({ params }: Props) {
         <h1 className="page-title mt-2 text-balance">{episode.title}</h1>
       </header>
       <StreamPlayer key={episode.slug} servers={episode.servers} slug={episode.slug} title={episode.title} />
+
+      {(previous || next) && <nav aria-label="Navigasi episode" className="mt-5 flex flex-wrap gap-3">
+        {previous && <Link href={`/episode/${previous.slug}`} className="button-secondary inline-flex max-w-full min-w-0 items-center gap-2"><Icon name="arrow-left" className="size-4 shrink-0" /><span className="min-w-0 break-words">Episode sebelumnya<span className="ml-1 text-muted">· {previous.title}</span></span></Link>}
+        {next && <Link href={`/episode/${next.slug}`} className="button-secondary inline-flex max-w-full min-w-0 items-center gap-2"><span className="min-w-0 break-words">Episode berikutnya<span className="ml-1 text-muted">· {next.title}</span></span><Icon name="arrow-right" className="size-4 shrink-0" /></Link>}
+      </nav>}
 
       <div className="mt-10 grid gap-10 lg:grid-cols-2 lg:gap-12">
         <section>

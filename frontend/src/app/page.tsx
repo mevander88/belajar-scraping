@@ -54,7 +54,7 @@ export default async function Home() {
         <DataNotice meta={response.meta} />
         <section>
           <SectionHeading label="Tayang sekarang" title="Anime berjalan" href="/anime?status=ongoing" />
-          <AnimeGrid items={ongoing} />
+          <AnimeGrid items={ongoing} context="ongoing" />
         </section>
         <section className="mt-14 md:mt-16">
           <SectionHeading label="Arsip terbaru" title="Sudah tamat" href="/anime?status=complete" />

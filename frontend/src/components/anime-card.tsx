@@ -1,10 +1,23 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { AnimeCardData } from "@/lib/types";
+import { labelStatus } from "@/lib/query";
 import { Icon } from "./icon";
 
-export function AnimeCard({ anime, priority = false }: { anime: AnimeCardData; priority?: boolean }) {
-  const note = anime.episode_text || anime.release_text || anime.schedule_text || anime.updated_text;
+export type AnimeCardContext = "ongoing" | "complete" | "search" | "genre";
+
+function cardNote(anime: AnimeCardData, context: AnimeCardContext) {
+  if (context === "search" && (anime.status === "ongoing" || anime.status === "complete")) return labelStatus(anime.status);
+  if (anime.episode_text) return anime.episode_text;
+  if (anime.schedule_text && context === "ongoing") return `Jadwal ${anime.schedule_text}`;
+  if (anime.release_text) return `Rilis ${anime.release_text}`;
+  if (anime.updated_text) return `Diperbarui ${anime.updated_text}`;
+  if (anime.schedule_text) return `Jadwal ${anime.schedule_text}`;
+  return "";
+}
+
+export function AnimeCard({ anime, context, priority = false }: { anime: AnimeCardData; context: AnimeCardContext; priority?: boolean }) {
+  const note = cardNote(anime, context);
   return (
     <article className="group min-w-0">
       <Link href={`/anime/${anime.slug}`} className="block rounded-xl focus-visible:outline-offset-4">
