@@ -32,5 +32,5 @@ export default async function AnimePage({ searchParams }: { searchParams: Promis
   if (response instanceof ApiError) {
     return <><PageHeading eyebrow={`${label} · Halaman ${page}`} title={title} description="Pilih judul untuk melihat informasi tayang dan daftar episode." /><CollectionError status={response.status} label={status === "complete" ? "tamat" : "berjalan"} /></>;
   }
-  return <><PageHeading eyebrow={`${label} · Halaman ${response.data.pagination.current}`} title={title} description="Pilih judul untuk melihat informasi tayang dan daftar episode." /><div className="shell py-10 md:py-12"><DataNotice meta={response.meta} /><AnimeGrid items={response.data.items} context={status} /><Pagination current={response.data.pagination.current} last={response.data.pagination.last} basePath="/anime" params={{ status }} /></div></>;
+  return <><PageHeading eyebrow={`${label} · Halaman ${response.data.pagination.current}`} title={title} description="Pilih judul untuk melihat informasi tayang dan daftar episode." /><div className="shell py-8 md:py-10"><DataNotice meta={response.meta} /><AnimeGrid items={response.data.items} context={status} /><Pagination current={response.data.pagination.current} last={response.data.pagination.last} basePath="/anime" params={{ status }} /></div></>;
 }

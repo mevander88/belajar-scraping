@@ -19,17 +19,17 @@
 }
 
 :root {
-  --background: #070b14;
-  --surface: #0d1422;
-  --surface-elevated: #131e31;
-  --surface-hover: #1a2942;
-  --border: #263b5b;
-  --text-primary: #f5f8ff;
-  --text-secondary: #b9c5d8;
-  --text-muted: #8495af;
-  --primary: #1b60f1;
-  --primary-hover: #144fcc;
-  --link-focus: #8ab4ff;
+  --background: #101113;
+  --surface: #191b1f;
+  --surface-elevated: #23262b;
+  --surface-hover: #2d3239;
+  --border: #353b43;
+  --text-primary: #f4f5f7;
+  --text-secondary: #c4c8d0;
+  --text-muted: #a2a9b4;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --link-focus: #a9c7ff;
   --success: #4ade80;
   --warning: #fbbf24;
   --error: #f87171;
@@ -67,8 +67,13 @@ img { background: var(--surface); }
   font-weight: 700;
 }
 .skip-link:focus { transform: translateY(0); }
-.shell { width: min(calc(100% - 2rem), 90rem); margin-inline: auto; }
+.shell { width: min(calc(100% - 3rem), 86rem); margin-inline: auto; }
 .text-balance { text-wrap: balance; }
+.hero-scrim {
+  background:
+    linear-gradient(90deg, rgb(10 11 13 / 88%) 0%, rgb(10 11 13 / 68%) 48%, rgb(10 11 13 / 38%) 100%),
+    linear-gradient(0deg, var(--background) 0%, transparent 32%);
+}
 .kicker {
   color: var(--text-muted);
   font-size: .78rem;
@@ -119,7 +124,7 @@ img { background: var(--surface); }
   line-height: 1.25;
   transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
 }
-.button-primary { border: 1px solid var(--primary); background: var(--primary); color: var(--text-primary); }
+.button-primary { border: 1px solid var(--primary); background: var(--primary); color: #fff; }
 .button-primary:hover { border-color: var(--primary-hover); background: var(--primary-hover); }
 .button-secondary { border: 1px solid var(--border); background: var(--surface); color: var(--text-primary); }
 .button-secondary:hover { border-color: var(--text-muted); background: var(--surface-hover); }
@@ -130,15 +135,24 @@ img { background: var(--surface); }
 .anime-detail-cover { grid-area: cover; }
 .anime-detail-intro { grid-area: intro; }
 .anime-detail-facts { grid-area: facts; }
-@media (min-width: 64rem) {
+@media (min-width: 48rem) {
   .anime-detail-header {
-    grid-template-columns: minmax(16rem, 20rem) minmax(0, 1fr);
+    grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr);
     grid-template-areas: "cover intro" "cover facts";
-    column-gap: 3rem;
-    align-items: end;
+    column-gap: 2rem;
+    align-items: start;
+    align-content: start;
   }
 }
-@media (max-width: 47.99rem) { .shell { width: min(calc(100% - 1.25rem), 90rem); } }
+@media (min-width: 64rem) {
+  .anime-detail-header { grid-template-columns: minmax(16rem, 20rem) minmax(0, 1fr); column-gap: 3rem; }
+}
+@media (max-width: 47.99rem) {
+  .shell { width: min(calc(100% - 1.25rem), 86rem); }
+  .hero-scrim {
+    background: linear-gradient(0deg, rgb(16 17 19 / 90%) 0%, rgb(10 11 13 / 68%) 55%, rgb(10 11 13 / 60%) 100%);
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after {

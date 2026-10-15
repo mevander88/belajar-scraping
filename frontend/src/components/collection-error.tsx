@@ -31,7 +31,7 @@ export function CollectionError({ status, label }: { status: number; label: stri
   const copy = errorCopy(status);
   return (
     <section className="shell py-12 md:py-16" role="alert">
-      <div className="max-w-2xl rounded-xl border border-error/40 bg-surface p-6 md:p-8">
+      <div className="max-w-2xl rounded-lg border border-error/40 bg-surface p-6 md:p-8">
         <Icon name="alert-circle" className="mb-4 size-8 text-error" />
         <p className="kicker text-error">Koleksi {label} belum tersedia</p>
         <h2 className="section-title mt-2">{copy.title}</h2>

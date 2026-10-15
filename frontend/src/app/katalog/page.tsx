@@ -30,8 +30,8 @@ export default async function CatalogPage() {
             {Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([initial, items]) => (
               <section key={initial} className="grid gap-3 border-t border-border pt-4 md:grid-cols-[4rem_1fr] md:gap-5">
                 <h2 className="text-2xl font-bold text-secondary">{initial}</h2>
-                <ul className="grid overflow-hidden rounded-xl border border-border bg-surface sm:grid-cols-2 lg:grid-cols-3">
-                  {items.map((item) => <li key={item.slug} className="border-b border-r border-border"><Link href={`/anime/${item.slug}`} className="flex min-h-11 items-center justify-between gap-3 px-3 py-2.5 text-sm font-semibold leading-5 text-secondary transition-colors hover:bg-hover hover:text-foreground"><span>{item.title}</span><Icon name="arrow-right" className="size-4 shrink-0 text-focus" /></Link></li>)}
+                <ul className="grid gap-x-5 sm:grid-cols-2 lg:grid-cols-3">
+                  {items.map((item) => <li key={item.slug} className="border-b border-border"><Link href={`/anime/${item.slug}`} className="group flex min-h-11 items-center justify-between gap-3 px-3 py-2.5 text-sm font-semibold leading-5 text-foreground transition-colors hover:bg-surface focus-visible:outline-offset-2"><span className="min-w-0 break-words group-hover:text-focus">{item.title}</span><Icon name="arrow-right" className="size-4 shrink-0 text-muted transition-colors group-hover:text-focus" /></Link></li>)}
                 </ul>
               </section>
             ))}
