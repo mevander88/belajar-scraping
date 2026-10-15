@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DataNotice } from "@/components/data-notice";
 import { EmptyState } from "@/components/empty-state";
+import { Icon } from "@/components/icon";
 import { ApiError, getAnime } from "@/lib/api";
 import { labelStatus } from "@/lib/query";
 
@@ -36,36 +37,36 @@ export default async function AnimeDetailPage({ params }: Props) {
   ].filter((item) => item[1]);
 
   return (
-    <div className="shell py-8 md:py-12">
+    <div className="shell py-8 md:py-10">
       <DataNotice meta={response.meta} />
-      <header className="anime-detail-header border-b border-ink pb-10 md:pb-12">
-        <div className="anime-detail-cover relative mx-auto aspect-[3/4] w-full max-w-sm overflow-hidden bg-paper-deep md:mx-0 md:max-w-none">
-          {anime.cover_url ? <Image src={anime.cover_url} alt={`Sampul ${anime.title}`} fill priority sizes="(max-width: 768px) 384px, 352px" className="object-cover" /> : <div className="grid h-full place-items-center font-display text-6xl italic text-muted/40">LA</div>}
+      <header className="anime-detail-header border-b border-border pb-8 md:pb-10">
+        <div className="anime-detail-cover relative mx-auto aspect-[3/4] w-full max-w-xs overflow-hidden rounded-xl border border-border bg-surface lg:mx-0 lg:max-w-none">
+          {anime.cover_url ? <Image src={anime.cover_url} alt={`Sampul ${anime.title}`} fill priority sizes="(max-width: 1024px) 320px, 320px" className="object-cover" /> : <div className="grid h-full place-items-center text-3xl font-bold text-muted">LA</div>}
         </div>
-        <div className="anime-detail-intro">
-          <p className="eyebrow text-accent-dark">{anime.type || "Anime"} · {labelStatus(anime.status)}</p>
-          <h1 className="display-title mt-3 max-w-5xl text-[clamp(3rem,6vw,6.5rem)] text-balance">{anime.title}</h1>
-          {anime.title_japan && <p className="mt-3 text-base text-muted md:text-lg">{anime.title_japan}</p>}
+        <div className="anime-detail-intro min-w-0">
+          <p className="kicker">{anime.type || "Anime"} · {labelStatus(anime.status)}</p>
+          <h1 className="feature-title mt-2 text-balance">{anime.title}</h1>
+          {anime.title_japan && <p className="mt-3 text-sm leading-6 text-secondary md:text-base">{anime.title_japan}</p>}
         </div>
         <div className="anime-detail-facts">
-          <dl className="grid grid-cols-2 border-t border-ink sm:grid-cols-4">
-            {facts.map(([term, value]) => <div key={term} className="border-b border-r border-rule py-3 pr-3"><dt className="text-xs font-bold uppercase tracking-wider text-muted">{term}</dt><dd className="mt-1.5 text-sm font-semibold md:text-base">{value}</dd></div>)}
+          <dl className="grid grid-cols-2 overflow-hidden rounded-lg border border-border bg-surface sm:grid-cols-4">
+            {facts.map(([term, value]) => <div key={term} className="border-b border-r border-border p-3"><dt className="text-xs font-semibold text-muted">{term}</dt><dd className="mt-1 text-sm font-semibold leading-5 text-foreground">{value}</dd></div>)}
           </dl>
-          {anime.genres.length > 0 && <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2">{anime.genres.map((genre) => <Link key={genre.slug} href={`/genres/${genre.slug}`} className="link-line text-sm font-bold">{genre.name}</Link>)}</div>}
+          {anime.genres.length > 0 && <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2">{anime.genres.map((genre) => <Link key={genre.slug} href={`/genres/${genre.slug}`} className="text-link text-sm">{genre.name}</Link>)}</div>}
         </div>
       </header>
 
-      <div className="grid gap-12 py-10 lg:grid-cols-[.7fr_1.3fr] lg:py-12">
+      <div className="grid gap-10 py-8 lg:grid-cols-[.7fr_1.3fr] lg:gap-12 lg:py-10">
         <section>
-          <p className="eyebrow text-accent-dark">Sinopsis</p>
-          <h2 className="mt-2 font-display text-4xl">Tentang cerita</h2>
-          <p className="mt-4 whitespace-pre-line text-base leading-8 text-muted">{anime.synopsis || "Sinopsis belum tersedia."}</p>
+          <p className="kicker">Sinopsis</p>
+          <h2 className="section-title mt-1.5">Tentang cerita</h2>
+          <p className="mt-3 whitespace-pre-line text-[15px] leading-7 text-secondary">{anime.synopsis || "Sinopsis belum tersedia."}</p>
         </section>
         <section>
-          <p className="eyebrow text-accent-dark">Tonton berikutnya</p>
-          <h2 className="mt-2 font-display text-4xl">Daftar episode</h2>
-          {anime.episodes.length ? <ol className="mt-4 max-h-[42rem] overflow-y-auto border-t border-ink">{anime.episodes.map((episode, index) => <li key={episode.slug}><Link href={`/episode/${episode.slug}`} className="grid min-h-11 grid-cols-[2.5rem_1fr_auto] items-center gap-3 border-b border-rule py-3 hover:text-accent-dark"><span className="text-xs font-bold text-muted">{String(index + 1).padStart(2, "0")}</span><strong className="text-sm">{episode.title}</strong><small className="hidden text-muted sm:block">{episode.release_text}</small></Link></li>)}</ol> : <div className="mt-4"><EmptyState title="Episode belum tersedia" /></div>}
-          {anime.batches.length > 0 && <div className="mt-8"><h3 className="text-xs font-bold uppercase tracking-wider text-muted">Paket batch dari sumber</h3><div className="mt-3 flex flex-wrap gap-x-5 gap-y-2">{anime.batches.map((batch) => <a key={batch.slug} href={batch.url} target="_blank" rel="noreferrer" className="link-line text-sm font-bold">{batch.title} ↗</a>)}</div></div>}
+          <p className="kicker">Tonton berikutnya</p>
+          <h2 className="section-title mt-1.5">Daftar episode</h2>
+          {anime.episodes.length ? <ol className="mt-4 max-h-[42rem] overflow-y-auto rounded-xl border border-border bg-surface">{anime.episodes.map((episode, index) => <li key={episode.slug}><Link href={`/episode/${episode.slug}`} className="grid min-h-11 grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-3 border-b border-border px-3 py-3 transition-colors hover:bg-hover"><span className="text-xs font-bold text-muted">{String(index + 1).padStart(2, "0")}</span><strong className="text-sm font-semibold leading-5 text-foreground">{episode.title}</strong><span className="flex items-center gap-2"><small className="hidden text-muted sm:block">{episode.release_text}</small><Icon name="play" className="size-4 text-focus" /></span></Link></li>)}</ol> : <div className="mt-4"><EmptyState icon="play-circle" title="Episode belum tersedia" /></div>}
+          {anime.batches.length > 0 && <div className="mt-8"><h3 className="text-xs font-semibold text-muted">Paket batch dari sumber</h3><div className="mt-3 flex flex-wrap gap-x-5 gap-y-2">{anime.batches.map((batch) => <a key={batch.slug} href={batch.url} target="_blank" rel="noreferrer" className="text-link inline-flex items-center gap-1.5 text-sm">{batch.title}<Icon name="external-link" className="size-4" /></a>)}</div></div>}
         </section>
       </div>
     </div>

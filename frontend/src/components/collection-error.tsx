@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Icon } from "./icon";
 import { RetryButton } from "./retry-button";
 
 function errorCopy(status: number) {
@@ -29,14 +30,15 @@ function errorCopy(status: number) {
 export function CollectionError({ status, label }: { status: number; label: string }) {
   const copy = errorCopy(status);
   return (
-    <section className="shell py-16" role="alert">
-      <div className="max-w-2xl border-y border-ink py-8">
-        <p className="eyebrow text-accent-dark">Koleksi {label} belum tersedia</p>
-        <h2 className="mt-3 font-display text-4xl">{copy.title}</h2>
-        <p className="mt-4 max-w-xl leading-7 text-muted">{copy.description}</p>
-        <div className="mt-7 flex flex-wrap items-center gap-5">
+    <section className="shell py-12 md:py-16" role="alert">
+      <div className="max-w-2xl rounded-xl border border-error/40 bg-surface p-6 md:p-8">
+        <Icon name="alert-circle" className="mb-4 size-8 text-error" />
+        <p className="kicker text-error">Koleksi {label} belum tersedia</p>
+        <h2 className="section-title mt-2">{copy.title}</h2>
+        <p className="mt-3 max-w-xl leading-7 text-secondary">{copy.description}</p>
+        <div className="mt-6 flex flex-wrap items-center gap-5">
           <RetryButton />
-          <Link href="/" className="link-line text-sm font-bold">Kembali ke beranda</Link>
+          <Link href="/" className="text-link inline-flex items-center gap-2 text-sm"><Icon name="home" className="size-4" />Kembali ke beranda</Link>
         </div>
       </div>
     </section>
