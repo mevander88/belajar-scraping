@@ -28,7 +28,7 @@ export default async function SearchPage({ searchParams }: Props) {
         <PageHeading eyebrow="Pencarian anime" title="Temukan judul untuk ditonton" description="Masukkan judul atau bagian judul anime yang ingin dicari." />
         <div className="shell py-10 md:py-12">
           <SearchForm />
-          <div className="mt-12"><EmptyState title="Mulai dengan sebuah judul" description="Hasil dari sumber akan muncul di halaman ini." /></div>
+          <div className="mt-12"><EmptyState icon="search" title="Mulai dengan sebuah judul" description="Hasil dari sumber akan muncul di halaman ini." /></div>
         </div>
       </>
     );
@@ -50,7 +50,7 @@ export default async function SearchPage({ searchParams }: Props) {
         <div className="mt-12">
           {count > 0
             ? <AnimeGrid items={response.data.items} />
-            : <EmptyState title="Tidak ada judul yang cocok" description="Coba kata kunci lain atau gunakan bagian judul yang lebih singkat." />}
+            : <EmptyState icon="search" title="Tidak ada judul yang cocok" description="Coba kata kunci lain atau gunakan bagian judul yang lebih singkat." />}
         </div>
       </div>
     </>

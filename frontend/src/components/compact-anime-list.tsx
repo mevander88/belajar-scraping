@@ -2,21 +2,22 @@ import Image from "next/image";
 import Link from "next/link";
 import type { AnimeCardData } from "@/lib/types";
 import { EmptyState } from "./empty-state";
+import { Icon } from "./icon";
 
 export function CompactAnimeList({ items }: { items: AnimeCardData[] }) {
   if (!items.length) return <EmptyState title="Belum ada judul" description="Arsip anime ini masih kosong." />;
   return (
-    <div className="grid border-t border-ink md:grid-cols-2">
+    <div className="grid overflow-hidden rounded-xl border border-border bg-surface md:grid-cols-2">
       {items.map((anime) => (
-        <Link key={anime.slug} href={`/anime/${anime.slug}`} className="group grid grid-cols-[4.5rem_1fr_auto] gap-4 border-b border-rule py-4 md:odd:border-r md:odd:pr-5 md:even:pl-5">
-          <div className="relative aspect-[3/4] overflow-hidden bg-paper-deep">
-            {anime.cover_url ? <Image src={anime.cover_url} alt="" fill sizes="72px" className="object-cover transition duration-500 group-hover:scale-[1.03]" /> : <div className="grid h-full place-items-center font-display italic text-muted">LA</div>}
+        <Link key={anime.slug} href={`/anime/${anime.slug}`} className="group grid min-w-0 grid-cols-[4.5rem_minmax(0,1fr)_auto] gap-4 border-b border-border p-4 transition-colors hover:bg-hover md:odd:border-r">
+          <div className="relative aspect-[3/4] overflow-hidden rounded-lg bg-elevated">
+            {anime.cover_url ? <Image src={anime.cover_url} alt="" fill sizes="72px" className="object-cover" /> : <div className="grid h-full place-items-center text-sm font-bold text-muted">LA</div>}
           </div>
-          <div className="self-center">
-            <h3 className="font-display text-xl leading-tight group-hover:text-accent-dark">{anime.title}</h3>
-            <p className="mt-2 text-xs font-bold uppercase tracking-wider text-muted">{anime.release_text || anime.updated_text || anime.studio || "Tamat"}</p>
+          <div className="min-w-0 self-center">
+            <h3 className="text-sm font-semibold leading-snug text-foreground transition-colors group-hover:text-focus sm:text-base">{anime.title}</h3>
+            <p className="mt-1.5 text-xs leading-5 text-muted">{anime.release_text || anime.updated_text || anime.studio || "Tamat"}</p>
           </div>
-          <span className="self-center text-accent-dark" aria-hidden="true">→</span>
+          <Icon name="arrow-right" className="size-4 self-center text-focus" />
         </Link>
       ))}
     </div>

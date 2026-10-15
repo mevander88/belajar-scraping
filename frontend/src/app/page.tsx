@@ -4,6 +4,7 @@ import { AnimeGrid } from "@/components/anime-grid";
 import { CompactAnimeList } from "@/components/compact-anime-list";
 import { DataNotice } from "@/components/data-notice";
 import { SectionHeading } from "@/components/section-heading";
+import { Icon } from "@/components/icon";
 import { getHome } from "@/lib/api";
 
 export default async function Home() {
@@ -13,35 +14,49 @@ export default async function Home() {
   return (
     <>
       {featured ? (
-        <section className="editorial-grid border-b border-ink">
-          <div className="shell grid gap-8 py-8 md:grid-cols-[1.15fr_.85fr] md:items-center md:py-12 lg:gap-16">
-            <div>
-              <p className="eyebrow text-accent-dark">Sedang tayang</p>
-              <h1 className="display-title mt-4 max-w-4xl text-[clamp(3.4rem,7vw,7.5rem)] text-balance">{featured.title}</h1>
-              <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm font-bold text-muted">
+        <section className="relative isolate -mt-18 min-h-[32rem] overflow-hidden border-b border-border bg-surface md:min-h-0">
+          {featured.cover_url && (
+            <>
+              <Image
+                src={featured.cover_url}
+                alt=""
+                fill
+                priority
+                sizes="100vw"
+                className="-z-20 object-cover object-center"
+                aria-hidden="true"
+              />
+              <div className="absolute inset-0 -z-10 bg-black/80" aria-hidden="true" />
+            </>
+          )}
+          <div className="shell grid min-h-[32rem] content-center gap-8 pb-8 pt-26 md:min-h-0 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)] lg:items-center lg:gap-14 lg:pb-10 lg:pt-28">
+            <div className="min-w-0">
+              <p className="kicker">Sedang tayang</p>
+              <h1 className="feature-title mt-3 text-balance">{featured.title}</h1>
+              <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold text-secondary">
                 {featured.episode_text && <span>{featured.episode_text}</span>}
                 {featured.schedule_text && <span>{featured.schedule_text}</span>}
                 {featured.score && <span>Skor {featured.score}</span>}
               </div>
-              {featured.synopsis && <p className="mt-6 max-w-2xl text-base leading-7 text-muted md:text-lg">{featured.synopsis}</p>}
-              <Link href={`/anime/${featured.slug}`} className="mt-7 inline-flex min-h-11 items-center bg-accent px-5 py-3 text-sm font-bold text-paper hover:bg-accent-dark">Lihat detail dan episode →</Link>
+              {featured.synopsis && <p className="mt-4 max-w-2xl text-[15px] leading-7 text-secondary md:text-base">{featured.synopsis}</p>}
+              <Link href={`/anime/${featured.slug}`} className="button-primary mt-6 inline-flex items-center justify-center gap-2">Lihat detail dan episode<Icon name="arrow-right" className="size-4" /></Link>
             </div>
-            <Link href={`/anime/${featured.slug}`} className="group relative mx-auto aspect-[3/4] w-full max-w-[27rem] overflow-hidden bg-paper-deep md:mx-0 md:justify-self-end">
-              {featured.cover_url ? <Image src={featured.cover_url} alt={`Sampul ${featured.title}`} fill priority sizes="(max-width: 768px) 90vw, 432px" className="object-cover transition duration-500 group-hover:scale-[1.02]" /> : <div className="grid h-full place-items-center font-display text-6xl italic text-muted/40">LA</div>}
+            <Link href={`/anime/${featured.slug}`} className="relative mx-auto hidden aspect-[3/4] w-full max-w-[22rem] overflow-hidden rounded-xl border border-border bg-elevated md:block lg:mx-0 lg:justify-self-end">
+              {featured.cover_url ? <Image src={featured.cover_url} alt={`Sampul ${featured.title}`} fill priority sizes="(max-width: 1024px) 352px, 384px" className="object-cover" /> : <div className="grid h-full place-items-center text-3xl font-bold text-muted">LA</div>}
             </Link>
           </div>
         </section>
       ) : (
-        <section className="editorial-grid border-b border-ink"><div className="shell py-16"><p className="eyebrow text-accent-dark">Layar Anime</p><h1 className="display-title page-title mt-4">Arsip tayangan anime.</h1></div></section>
+        <section className="-mt-18 border-b border-border bg-surface"><div className="shell pb-10 pt-28"><p className="kicker">Layar Anime</p><h1 className="page-title mt-2">Arsip tayangan anime.</h1></div></section>
       )}
 
-      <div className="shell py-12 md:py-16">
+      <div className="shell py-10 md:py-12">
         <DataNotice meta={response.meta} />
         <section>
           <SectionHeading label="Tayang sekarang" title="Anime berjalan" href="/anime?status=ongoing" />
           <AnimeGrid items={ongoing} />
         </section>
-        <section className="mt-16 md:mt-20">
+        <section className="mt-14 md:mt-16">
           <SectionHeading label="Arsip terbaru" title="Sudah tamat" href="/anime?status=complete" />
           <CompactAnimeList items={response.data.complete} />
         </section>
