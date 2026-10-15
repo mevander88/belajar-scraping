@@ -15,7 +15,7 @@ export function CompactAnimeList({ items }: { items: AnimeCardData[] }) {
           </div>
           <div className="min-w-0 self-center">
             <h3 className="text-sm font-semibold leading-snug text-foreground transition-colors group-hover:text-focus sm:text-base">{anime.title}</h3>
-            <p className="mt-1.5 text-xs leading-5 text-muted">{anime.release_text || anime.updated_text || anime.studio || "Tamat"}</p>
+            <p className="mt-1.5 text-xs leading-5 text-muted">{anime.release_text ? `Rilis ${anime.release_text}` : anime.updated_text ? `Diperbarui ${anime.updated_text}` : anime.studio || "Tamat"}</p>
           </div>
           <Icon name="arrow-right" className="size-4 self-center text-focus" />
         </Link>

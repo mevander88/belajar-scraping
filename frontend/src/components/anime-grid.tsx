@@ -1,8 +1,8 @@
 import type { AnimeCardData } from "@/lib/types";
-import { AnimeCard } from "./anime-card";
+import { AnimeCard, type AnimeCardContext } from "./anime-card";
 import { EmptyState } from "./empty-state";
 
-export function AnimeGrid({ items }: { items: AnimeCardData[] }) {
+export function AnimeGrid({ items, context }: { items: AnimeCardData[]; context: AnimeCardContext }) {
   if (!items.length) return <EmptyState title="Belum ada judul" description="Daftar anime ini masih kosong." />;
-  return <div className="grid grid-cols-2 gap-x-3 gap-y-8 sm:grid-cols-3 sm:gap-x-4 lg:grid-cols-4 xl:grid-cols-5 xl:gap-x-5">{items.map((anime, index) => <AnimeCard key={anime.slug} anime={anime} priority={index < 2} />)}</div>;
+  return <div className="grid grid-cols-2 gap-x-3 gap-y-8 sm:grid-cols-3 sm:gap-x-4 lg:grid-cols-4 xl:grid-cols-5 xl:gap-x-5">{items.map((anime, index) => <AnimeCard key={anime.slug} anime={anime} context={context} priority={index < 2} />)}</div>;
 }

@@ -50,7 +50,9 @@ export function StreamPlayer({ servers, slug, title }: Props) {
   const togglePlayback = async () => {
     const video = videoRef.current;
     if (!video) return;
-    if (video.paused) await video.play(); else video.pause();
+    if (!video.paused) { video.pause(); return; }
+    try { await video.play(); }
+    catch { setMessage("Video belum dapat diputar. Coba lagi atau pilih server lain."); }
   };
 
   const toggleFullscreen = async () => {
@@ -93,10 +95,10 @@ export function StreamPlayer({ servers, slug, title }: Props) {
 
   return (
     <section aria-label={`Pemutar ${title}`}>
-      <div className="mb-4 flex flex-col gap-4 rounded-xl border border-border bg-surface p-4 md:flex-row md:items-center md:justify-between">
+      <div className="mb-3 flex flex-col gap-2 rounded-xl border border-border bg-surface p-3 sm:p-4 md:flex-row md:items-center md:justify-between md:gap-4">
         <div>
           <p className="kicker">Kualitas dan server</p>
-          <p className="mt-1 text-sm text-secondary">Pilih alternatif jika video gagal dimuat.</p>
+          <p className="mt-1 text-xs text-secondary md:text-sm">Pilih alternatif jika video gagal dimuat.</p>
         </div>
         <div className="w-full md:max-w-sm">
           <label htmlFor="stream-server" className="sr-only">Pilih kualitas dan server video</label>
@@ -119,7 +121,7 @@ export function StreamPlayer({ servers, slug, title }: Props) {
         </div>
       </div>
 
-      <div ref={playerRef} tabIndex={0} onKeyDown={handleKeyDown} aria-busy={status === "loading"} className="group relative aspect-video overflow-hidden rounded-xl border border-border bg-black text-white focus-visible:outline-offset-4">
+      <div ref={playerRef} tabIndex={0} onKeyDown={handleKeyDown} aria-busy={status === "loading" && !hasLoaded} className="group relative aspect-video overflow-hidden rounded-xl border border-border bg-black text-white focus-visible:outline-offset-4">
         {streamURL && !failed ? (
           <video
             key={streamURL}
@@ -130,7 +132,7 @@ export function StreamPlayer({ servers, slug, title }: Props) {
             muted={muted}
             src={streamURL}
             aria-label={title}
-            onLoadStart={() => { setStatus("loading"); setHasLoaded(false); }}
+            onLoadStart={() => setStatus("loading")}
             onCanPlay={(event) => { void startWhenReady(event.currentTarget); }}
             onPlaying={() => { setPlaying(true); setStatus("ready"); setHasLoaded(true); setMessage(""); }}
             onPause={() => setPlaying(false)}
@@ -141,44 +143,50 @@ export function StreamPlayer({ servers, slug, title }: Props) {
             onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)}
             onDurationChange={(event) => setDuration(event.currentTarget.duration)}
             onVolumeChange={(event) => { setMuted(event.currentTarget.muted); setVolume(event.currentTarget.volume); }}
-            onError={() => { autoPlayPendingRef.current = false; setFailed(true); setHasLoaded(false); setStatus("error"); setMessage("Berkas video tidak dapat diputar. Coba server lain."); }}
+            onError={() => { autoPlayPendingRef.current = false; setFailed(true); setHasLoaded(false); setStatus("error"); setMessage(supportedServers.length > 1 ? "Berkas video tidak dapat diputar. Coba server lain." : "Berkas video tidak dapat diputar. Coba lagi."); }}
           />
         ) : (
           <div className="grid h-full place-items-center px-6 text-center">
             <div>
-              <p className="text-lg font-semibold">{status === "loading" ? "Menyiapkan video…" : "Video belum dapat diputar"}</p>
+              <p className="text-lg font-semibold">Video belum dapat diputar</p>
               {message && <p className="mt-2 max-w-lg text-sm text-white/70">{message}</p>}
+              {failed && <div className="mt-4 flex flex-wrap justify-center gap-3">
+                <button type="button" onClick={() => { const server = supportedServers.find((item) => item.id === selectedID); if (server) chooseServer(server); }} className="button-secondary inline-flex items-center gap-2"><Icon name="refresh" className="size-4" />Coba lagi</button>
+                {supportedServers.length > 1 && <button type="button" onClick={() => document.getElementById("stream-server")?.focus()} className="text-link min-h-11 px-2">Pilih server lain</button>}
+              </div>}
             </div>
           </div>
         )}
 
-        {streamURL && !failed && status === "loading" && (
-          <div className={`pointer-events-none absolute inset-0 grid place-items-center ${hasLoaded ? "bg-black/55" : "bg-black"}`} role="status" aria-live="polite">
-            {!hasLoaded && <div className="absolute inset-0 animate-pulse bg-elevated/60" aria-hidden="true" />}
+        {streamURL && !failed && status === "loading" && !hasLoaded && (
+          <div className="pointer-events-none absolute inset-0 grid place-items-center bg-black" role="status" aria-live="polite">
+            <div className="absolute inset-0 animate-pulse bg-elevated/60" aria-hidden="true" />
             <div className="relative flex flex-col items-center gap-3 px-6 text-center">
               <span className="size-10 animate-spin rounded-full border-2 border-white/25 border-t-focus" aria-hidden="true" />
-              <p className="text-sm font-semibold md:text-base">{hasLoaded ? "Memuat lanjutan video…" : "Menyiapkan video…"}</p>
+              <p className="text-sm font-semibold md:text-base">Menyiapkan video…</p>
             </div>
           </div>
         )}
 
-        {streamURL && !failed && (
+        {streamURL && !failed && status === "loading" && hasLoaded && <p className="pointer-events-none absolute left-3 top-3 inline-flex items-center gap-2 rounded-md bg-black/85 px-3 py-2 text-xs font-semibold" role="status" aria-live="polite"><span className="size-3.5 animate-spin rounded-full border-2 border-white/30 border-t-focus" aria-hidden="true" />Memuat lanjutan video…</p>}
+
+        {streamURL && !failed && hasLoaded && (
           <div className="absolute inset-x-0 bottom-0 bg-black/85 p-3 md:p-4">
             <label className="sr-only" htmlFor="video-progress">Posisi video</label>
-            <input id="video-progress" type="range" min={0} max={duration || 0} step="0.1" value={Math.min(currentTime, duration || 0)} onChange={(event) => { if (videoRef.current) videoRef.current.currentTime = Number(event.target.value); }} className="w-full accent-[var(--primary)]" />
+            <input id="video-progress" type="range" min={0} max={Number.isFinite(duration) && duration > 0 ? duration : 0} step="0.1" value={Math.min(currentTime, Number.isFinite(duration) && duration > 0 ? duration : 0)} disabled={!Number.isFinite(duration) || duration <= 0} onChange={(event) => { if (videoRef.current) videoRef.current.currentTime = Number(event.target.value); }} className="w-full accent-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-50" />
             <div className="mt-2 flex flex-wrap items-center gap-3 text-sm font-semibold">
               <button type="button" onClick={() => void togglePlayback()} className="inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-md border border-white/40 px-3 hover:bg-white/10" aria-label={playing ? "Jeda" : "Putar"}><Icon name={playing ? "pause" : "play"} className="size-4" /><span className="hidden sm:inline">{playing ? "Jeda" : "Putar"}</span></button>
               <span className="mr-auto tabular-nums">{formatTime(currentTime)} / {formatTime(duration)}</span>
               <button type="button" onClick={() => { const video = videoRef.current; if (video) { video.muted = !video.muted; setMuted(video.muted); } }} className="inline-flex min-h-11 items-center gap-2 px-2" aria-label={muted ? "Aktifkan suara" : "Bisukan"}><Icon name={muted ? "volume-off" : "volume"} className="size-5" /><span className="hidden lg:inline">{muted ? "Suara" : "Bisukan"}</span></button>
               <label className="sr-only" htmlFor="video-volume">Volume</label>
               <input id="video-volume" type="range" min={0} max={1} step={0.05} value={muted ? 0 : volume} onChange={(event) => { const value = Number(event.target.value); if (videoRef.current) { videoRef.current.volume = value; videoRef.current.muted = value === 0; } }} className="hidden w-24 accent-[var(--primary)] sm:block" />
-              <button type="button" onClick={() => void toggleFullscreen()} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-white/40 px-3 hover:bg-white/10"><Icon name="maximize" className="size-4" /><span className="hidden sm:inline">Layar penuh</span></button>
+              <button type="button" onClick={() => void toggleFullscreen()} aria-label="Layar penuh" className="inline-flex min-h-11 items-center gap-2 rounded-md border border-white/40 px-3 hover:bg-white/10"><Icon name="maximize" className="size-4" /><span className="hidden sm:inline">Layar penuh</span></button>
             </div>
           </div>
         )}
       </div>
       {message && !failed && <p className="mt-3 text-sm font-semibold text-warning" role="status">{message}</p>}
-      <p className="mt-3 text-sm leading-6 text-muted">Pintasan: spasi atau K untuk putar/jeda, panah untuk maju/mundur, M untuk suara, dan F untuk layar penuh.</p>
+      <details className="mt-3 text-sm text-muted"><summary className="w-fit cursor-pointer py-1 hover:text-secondary">Pintasan keyboard</summary><p className="mt-1 leading-6">Spasi atau K untuk putar/jeda, panah untuk maju/mundur, M untuk suara, dan F untuk layar penuh.</p></details>
     </section>
   );
 }
